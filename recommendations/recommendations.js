@@ -17,6 +17,7 @@ const GenreEnum = Object.freeze({
   RAP: 'rap',
   REGGAE: 'reggae',
   ROCK: 'rock',
+  SOUL: 'soul',
 });
 const genres = Object.values(GenreEnum);
 
