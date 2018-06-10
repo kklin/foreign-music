@@ -34,7 +34,9 @@ async function main() {
 
   for (genre of genres) {
     for (nationality of nationalities) {
+      console.log(`Seeding ${nationality} ${genre}`);
       await seedPlaylists(pgClient, spotifyApi, genre, nationality);
+      await seedTracks(pgClient, spotifyApi, genre, nationality);
     }
   }
 
@@ -52,16 +54,22 @@ async function seedPlaylists(pgClient, spotifyApi, genre, nationality) {
   });
 }
 
-async function seedTracks(pgClient, spotifyApi) {
-  // For each playlist, get 10 random tracks.
-  // TODO: Use maximum pagination.
-  //playlistSample.forEach((playlist) => {
-  //spotifyApi.getPlaylistTracks(playlist.owner.id, playlist.id).then((resp) => {
-  // Save track information to database.
-  //const trackSample = getRandomItems(resp.body.items, 10);
-  //console.log(trackSample);
-  //});
-  //});
+async function seedTracks(pgClient, spotifyApi, genre, nationality) {
+  const playlists = await pgClient.query({
+    text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2',
+    values: [genre, nationality]
+  });
+  const playlistSample = getRandomItems(playlists.rows, 5);
+  return Promise.all(playlistSample.map(async (playlist) => {
+    const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id);
+    const trackSample = getRandomItems(tracksResp.body.items, 10);
+    return Promise.all(trackSample.map((track) => {
+      return pgClient.query({
+        text: 'INSERT INTO tracks(id, playlist_id, name, artist_id, genre, country) VALUES ($1, $2, $3, $4, $5, $6)',
+        values: [track.track.id, playlist.id, track.track.name, track.track.artists[0].id, genre, nationality],
+      });
+    }));
+  }));
 }
 
 function getRandomItems(arr, n) {
