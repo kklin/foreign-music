@@ -40,7 +40,8 @@ async function main() {
     //}
   //}
 
-  await recommendTracks(pgClient, spotifyApi, 'californication');
+  //await recommendTracks(pgClient, spotifyApi, 'californication');
+  await listAllGenres(pgClient, spotifyApi);
   await pgClient.end();
 }
 
@@ -113,6 +114,21 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
     seed_tracks: [seedTrackInfo.body.tracks.items[0].id, foreignSeedTracks.rows[0].id],
   });
   recommendations.body.tracks.slice(0, 10).forEach(printTrack);
+}
+
+async function listAllGenres(pgClient, spotifyApi) {
+  const artistIds = await pgClient.query('SELECT DISTINCT artist_id FROM tracks');
+  const genresSet = new Set();
+  for (let i = 0; i < artistIds.rows.length; i += 50) {
+    // TODO: Why is ID null?
+    const ids = artistIds.rows.slice(i, i + 50).map(row => row.artist_id).filter((id) => id !== null);
+    console.log(ids);
+    const artists = await spotifyApi.getArtists(ids);
+    artists.body.artists.forEach((artist) => {
+      artist.genres.forEach(genre => genresSet.add(genre));
+    });
+  }
+  console.log(genresSet);
 }
 
 function getRandomItems(arr, n) {
