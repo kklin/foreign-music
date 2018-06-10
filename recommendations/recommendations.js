@@ -39,6 +39,7 @@ const CountryEnum = Object.freeze({
   PAKISTAN: 'pakistan',
   PHILLIPINES: 'phillipines',
   RUSSIA: 'russia',
+  SWEDEN: 'sweden',
   TURKEY: 'turkey',
   VIETNAM: 'vietnam',
 });
@@ -62,6 +63,7 @@ const countryToAdjective = {
   [ CountryEnum.PAKISTAN ]: 'pakistani',
   [ CountryEnum.PHILLIPINES ]: 'filipino',
   [ CountryEnum.RUSSIA ]: 'russian',
+  [ CountryEnum.SWEDEN ]: 'swedish',
   [ CountryEnum.TURKEY ]: 'turkish',
   [ CountryEnum.VIETNAM ]: 'vietnamese',
 }
