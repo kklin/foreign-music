@@ -121,7 +121,7 @@ function getRandomItems(arr, n) {
 
   const randomIndices = new Set();
   while (randomIndices.size != n) {
-    randomIndices.add(getRandomNumber(n));
+    randomIndices.add(getRandomNumber(arr.length));
   }
 
   return Array.from(randomIndices).map((idx) => arr[idx]);
