@@ -1,8 +1,8 @@
 const SpotifyWebApi = require('spotify-web-api-node');
 const PostgresClient = require('pg').Client;
 
-const genres = ['edm', 'reggae', 'pop', 'rock', 'folk', 'jazz', 'punk', 'metal', 'blues', 'funk', 'disco', 'rap', 'acoustic', 'grunge', 'jazz'].slice(0, 1);
-const nationalities = ['chinese', 'indian', 'indonesian', 'brazilian', 'pakistani', 'nigerian', 'russian', 'japanese', 'mexican', 'ethiopian', 'filipino', 'egyptian', 'vietnamese', 'iranian', 'turkish', 'german', 'italian', 'french'].slice(0, 1);
+const genres = ['edm', 'reggae', 'pop', 'rock', 'folk', 'jazz', 'punk', 'metal', 'blues', 'funk', 'disco', 'rap', 'acoustic', 'grunge', 'jazz'].slice(0, 5);
+const nationalities = ['chinese', 'indian', 'indonesian', 'brazilian', 'pakistani', 'nigerian', 'russian', 'japanese', 'mexican', 'ethiopian', 'filipino', 'egyptian', 'vietnamese', 'iranian', 'turkish', 'german', 'italian', 'french'].slice(0, 5);
 
 async function main() {
   const pgClient = new PostgresClient({
@@ -32,14 +32,15 @@ async function main() {
       console.log('Something went wrong when retrieving an access token', err);
     });
 
-  for (genre of genres) {
-    for (nationality of nationalities) {
-      console.log(`Seeding ${nationality} ${genre}`);
-      await seedPlaylists(pgClient, spotifyApi, genre, nationality);
-      await seedTracks(pgClient, spotifyApi, genre, nationality);
-    }
-  }
+  //for (genre of genres) {
+    //for (nationality of nationalities) {
+      //console.log(`Seeding ${nationality} ${genre}`);
+      //await seedPlaylists(pgClient, spotifyApi, genre, nationality);
+      //await seedTracks(pgClient, spotifyApi, genre, nationality);
+    //}
+  //}
 
+  await recommendTracks(pgClient, spotifyApi, 'californication');
   await pgClient.end();
 }
 
@@ -72,6 +73,47 @@ async function seedTracks(pgClient, spotifyApi, genre, nationality) {
   }));
 }
 
+async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
+  const seedTrackInfo = await spotifyApi.searchTracks(seedTrackName);
+  const seedTrackArtistInfo = await spotifyApi.getArtist(seedTrackInfo.body.tracks.items[0].artists[0].id);
+  const seedTrackGenres = seedTrackArtistInfo.body.genres;
+  const availableGenres = await pgClient.query({
+    text: 'SELECT DISTINCT country, genre FROM tracks',
+  });
+  const availableGenresToCountries = {};
+  availableGenres.rows.forEach((row) => {
+    if (!(row.genre in availableGenresToCountries)) {
+      availableGenresToCountries[row.genre] = [];
+    }
+    availableGenresToCountries[row.genre].push(row.country);
+  });
+
+  const genreIntersect = [];
+  seedTrackGenres.forEach((genre) => {
+    if (genre in availableGenresToCountries) {
+      genreIntersect.push(genre);
+    }
+  });
+
+  if (genreIntersect.length === 0) {
+    console.log('No data :(');
+    return;
+  }
+
+  const countries = availableGenresToCountries[genreIntersect[0]];
+  console.log(`Searching in ${countries[0]} ${genreIntersect[0]}`);
+
+  const foreignSeedTracks = await pgClient.query({
+    text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 LIMIT 1',
+    values: [genreIntersect[0], countries[0]],
+  });
+
+  const recommendations = await spotifyApi.getRecommendations({
+    seed_tracks: [seedTrackInfo.body.tracks.items[0].id, foreignSeedTracks.rows[0].id],
+  });
+  recommendations.body.tracks.slice(0, 10).forEach(printTrack);
+}
+
 function getRandomItems(arr, n) {
   if (arr.length < n) {
     return arr;
@@ -87,6 +129,10 @@ function getRandomItems(arr, n) {
 
 function getRandomNumber(n) {
   return Math.floor(Math.random() * n);
+}
+
+function printTrack(track) {
+  console.log(`${track.artists[0].name} - ${track.name} (${track.preview_url})`);
 }
 
 main();
