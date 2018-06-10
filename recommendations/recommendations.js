@@ -100,12 +100,13 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
     return;
   }
 
-  const countries = availableGenresToCountries[genreIntersect[0]];
-  console.log(`Searching in ${countries[0]} ${genreIntersect[0]}`);
+  console.log(`Country options: ${availableGenresToCountries[genreIntersect[0]]}`);
+  const country = getRandomItems(availableGenresToCountries[genreIntersect[0]], 1)[0];
+  console.log(`Searching in ${country} ${genreIntersect[0]}`);
 
   const foreignSeedTracks = await pgClient.query({
     text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 LIMIT 1',
-    values: [genreIntersect[0], countries[0]],
+    values: [genreIntersect[0], country],
   });
 
   const recommendations = await spotifyApi.getRecommendations({
