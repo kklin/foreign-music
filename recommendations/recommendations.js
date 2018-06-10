@@ -213,21 +213,18 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
   // more prone to SQL injection.
   const placeholders = seedTrackGenres.map((_, i) => '$' + (i + 1)).join(',');
   const foreignSeedTypes = await pgClient.query({
-    text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders})`,
+    text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders}) ORDER BY RANDOM() LIMIT 4`,
     values: seedTrackGenres,
   });
 
   if (foreignSeedTypes.rows.length === 0) {
     throw new Error('No seed data');
   }
-  // TODO: Randomize in the query.
-  const toSearch = getRandomItems(foreignSeedTypes.rows, 4);
 
   const recommendations = [];
-  await Promise.all(toSearch.map(async (foreignSeedType) => {
+  await Promise.all(foreignSeedTypes.rows.map(async (foreignSeedType) => {
     const foreignSeedTracks = await pgClient.query({
-      // TODO: Randomize selection.
-      text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 LIMIT 1',
+      text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 ORDER BY RANDOM() LIMIT 1',
       values: [foreignSeedType.genre, foreignSeedType.country],
     });
 
