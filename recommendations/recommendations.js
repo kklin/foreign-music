@@ -398,11 +398,14 @@ async function analyzeTracks(pgClient, spotifyApi, tracks) {
 }
 
 const genreToCountry = {
-  'c-pop': CountryEnum.CHINA,
   'carioca': CountryEnum.BRAZIL,
   'mandopop': CountryEnum.CHINA,
-  'k-pop': CountryEnum.KOREA,
-  'j-rock': CountryEnum.JAPAN,
+};
+
+const genrePrefixToCountry = {
+  'c-': CountryEnum.CHINA,
+  'k-': CountryEnum.KOREA,
+  'j-': CountryEnum.JAPAN,
 };
 
 function getCountryForArtist(artist) {
@@ -412,6 +415,12 @@ function getCountryForArtist(artist) {
     for (genreString of Object.keys(genreToCountry)) {
       if (lowerCaseGenre.includes(genreString)) {
         return genreToCountry[genreString];
+      }
+    }
+
+    for (genrePrefix of Object.keys(genrePrefixToCountry)) {
+      if (lowerCaseGenre.startsWith(genrePrefix)) {
+        return genrePrefixToCountry[genrePrefix];
       }
     }
 
