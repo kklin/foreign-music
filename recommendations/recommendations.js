@@ -108,6 +108,7 @@ async function main() {
 
   //await recommendTracks(pgClient, spotifyApi, 'californication');
   //await listAllGenres(pgClient, spotifyApi);
+  await analyzeSeedData(pgClient);
   await pgClient.end();
 }
 
@@ -199,6 +200,24 @@ async function listAllGenres(pgClient, spotifyApi) {
     });
   }
   console.log(genresSet);
+}
+
+async function analyzeSeedData(pgClient) {
+  const expNumTracks = 5 * 10;
+  for (genre of genres) {
+    for (country of countries) {
+      const numTracksResp = await pgClient.query({
+        text: 'SELECT COUNT(*) FROM tracks WHERE country = $1 AND genre = $2',
+        values: [ country, genre ],
+      });
+      const numTracks = numTracksResp.rows[0].count;
+
+      if (numTracks < expNumTracks) {
+        console.log(`${country} ${genre} has ${numTracks} seed tracks. ` +
+          `Expected ${expNumTracks} tracks`);
+      }
+    }
+  }
 }
 
 function getCountryForArtist(artist) {
