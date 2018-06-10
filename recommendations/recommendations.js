@@ -115,7 +115,8 @@ async function main() {
       if (process.argv.length < 4) {
         usage();
       }
-      await recommendTracks(pgClient, spotifyApi, process.argv[3]);
+      (await recommendTracks(pgClient, spotifyApi, process.argv[3]))
+        .forEach(printTrack);
       break;
     case 'list-genres':
       await listAllGenres(pgClient, spotifyApi);
@@ -207,47 +208,45 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
   const seedTrackInfo = await spotifyApi.searchTracks(seedTrackName);
   const seedTrackArtistInfo = await spotifyApi.getArtist(seedTrackInfo.body.tracks.items[0].artists[0].id);
   const seedTrackGenres = seedTrackArtistInfo.body.genres;
-  console.log(`Seed tracks genres: ${seedTrackGenres}`);
 
-
-  const availableGenres = await pgClient.query({
-    text: 'SELECT DISTINCT country, genre FROM tracks',
-  });
-  const availableGenresToCountries = {};
-  availableGenres.rows.forEach((row) => {
-    if (!(row.genre in availableGenresToCountries)) {
-      availableGenresToCountries[row.genre] = [];
-    }
-    availableGenresToCountries[row.genre].push(row.country);
+  // TODO: Not sure why WHERE genre = ANY($1) isn't working. The current way is
+  // more prone to SQL injection.
+  const placeholders = seedTrackGenres.map((_, i) => '$' + (i + 1)).join(',');
+  const foreignSeedTypes = await pgClient.query({
+    text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders})`,
+    values: seedTrackGenres,
   });
 
-  const genreIntersect = [];
-  seedTrackGenres.forEach((genre) => {
-    if (genre in availableGenresToCountries) {
-      genreIntersect.push(genre);
-    }
-  });
-
-  if (genreIntersect.length === 0) {
-    console.log('No data :(');
-    return;
+  if (foreignSeedTypes.rows.length === 0) {
+    throw new Error('No seed data');
   }
-  const genre = genreIntersect[getRandomNumber(genreIntersect.length)];
+  // TODO: Randomize in the query.
+  const toSearch = getRandomItems(foreignSeedTypes.rows, 4);
 
-  const countries = availableGenresToCountries[genre];
-  const country = countries[getRandomNumber(countries.length)];
-  console.log(`Searching in ${country} ${genre}`);
+  const recommendations = [];
+  await Promise.all(toSearch.map(async (foreignSeedType) => {
+    const foreignSeedTracks = await pgClient.query({
+      // TODO: Randomize selection.
+      text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 LIMIT 1',
+      values: [foreignSeedType.genre, foreignSeedType.country],
+    });
 
-  const foreignSeedTracks = await pgClient.query({
-    text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 LIMIT 1',
-    values: [genre, country],
-  });
+    if (foreignSeedTracks.rows.length === 0) {
+      console.error(`No seed tracks for ${foreignSeedType}`);
+      return;
+    }
 
-  const recommendations = await spotifyApi.getRecommendations({
-    seed_tracks: [seedTrackInfo.body.tracks.items[0].id, foreignSeedTracks.rows[0].id],
-    limit: 10,
-  });
-  return Promise.all(recommendations.body.tracks.map(track => printTrack(spotifyApi, track)));
+    console.log(`Getting recommendations for seed ${foreignSeedType.country} ${foreignSeedType.genre}`);
+    const recommendationsResp = await spotifyApi.getRecommendations({
+      seed_tracks: [seedTrackInfo.body.tracks.items[0].id, foreignSeedTracks.rows[0].id],
+      limit: 50,
+    });
+
+    recommendations.push(
+      ...(await analyzeTracks(pgClient, spotifyApi, recommendationsResp.body.tracks))
+      .filter(track => track.country));
+  }));
+  return recommendations;
 }
 
 async function listAllGenres(pgClient, spotifyApi) {
@@ -291,6 +290,18 @@ async function analyzeArtist(pgClient, spotifyApi, artistQuery) {
   console.log(`Name: ${artist.name}`);
   console.log(`Genres: ${artist.genres}`);
   console.log(`Country: ${getCountryForArtist(artist)}`);
+}
+
+async function analyzeTracks(pgClient, spotifyApi, tracks) {
+  const artistsResp = await spotifyApi.getArtists(tracks.map(track => track.artists[0].id));
+  const artistToCountry = {};
+  artistsResp.body.artists.forEach((artist) => {
+    artistToCountry[artist.id] = getCountryForArtist(artist);
+  });
+
+  return tracks.map(
+    track => Object.assign(track, { country: artistToCountry[track.artists[0].id] })
+  );
 }
 
 const genreToCountry = {
@@ -340,20 +351,8 @@ function getRandomNumber(n) {
   return Math.floor(Math.random() * n);
 }
 
-async function printTrack(spotifyApi, track) {
-  const artistResp = await spotifyApi.getArtist(track.artists[0].id);
-  const artist = artistResp.body;
-  console.log(`${artist.name} - ${track.name} (${getCountryForArtist(artist)}) (${track.preview_url})`);
-}
-
-class Track {
-  constructor(id, name, artist_name, artist_id, artist_country) {
-    this.id = id;
-    this.name = name;
-    this.artist_name = artist_name;
-    this.artist_id = artist_id;
-    this.artist_country = artist_country;
-  }
+async function printTrack(track) {
+  console.log(`${track.artists[0].name} - ${track.name} (${track.country}) (${track.preview_url})`);
 }
 
 main();
