@@ -134,6 +134,13 @@ async function listAllGenres(pgClient, spotifyApi) {
   console.log(genresSet);
 }
 
+function getCountryForArtist(artist) {
+  // Check if any genres contain the country string.
+  // Make case insensitive.
+  // Check for special cases, like c-pop.
+  // Return English by default.
+}
+
 function getRandomItems(arr, n) {
   if (arr.length < n) {
     return arr;
