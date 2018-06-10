@@ -12,10 +12,11 @@ var request = require('request'); // "Request" library
 var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
+const secrets = require('./secrets');
 
 // TODO: Set these via environment variables.
 var client_id = '33698d56449e4a8c9226f27573756d16'; // Your client id
-var client_secret = 'b9daa0497ddf4aeba11fba6a1479c8c9'; // Your secret
+var client_secret = secrets.spotifyClientSecret; // Your secret
 // This URI must be whitelisted in the settings page of the Spotify applications UI.
 // https://developer.spotify.com/dashboard/applications/33698d56449e4a8c9226f27573756d16.
 var redirect_uri = 'http://localhost:8888/callback'; // Your redirect uri
