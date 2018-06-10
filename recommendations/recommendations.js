@@ -1,8 +1,74 @@
 const SpotifyWebApi = require('spotify-web-api-node');
 const PostgresClient = require('pg').Client;
 
-const genres = ['edm', 'reggae', 'pop', 'rock', 'folk', 'jazz', 'punk', 'metal', 'blues', 'funk', 'disco', 'rap', 'acoustic', 'grunge', 'jazz'].slice(0, 5);
-const nationalities = ['chinese', 'indian', 'indonesian', 'brazilian', 'pakistani', 'nigerian', 'russian', 'japanese', 'mexican', 'ethiopian', 'filipino', 'egyptian', 'vietnamese', 'iranian', 'turkish', 'german', 'italian', 'french'].slice(0, 5);
+const GenreEnum = Object.freeze({
+  ACOUSTIC: 'acoustic',
+  BLUES: 'blues',
+  DISCO: 'disco',
+  EDM: 'edm',
+  FOLK: 'folk',
+  FUNK: 'funk',
+  GRUNGE: 'grunge',
+  JAZZ: 'jazz',
+  METAL: 'metal',
+  POP: 'pop',
+  PUNK: 'punk',
+  RAP: 'rap',
+  REGGAE: 'reggae',
+  ROCK: 'rock',
+});
+const genres = Object.values(GenreEnum).slice(0, 3);
+
+const CountryEnum = Object.freeze({
+  BRAZIL: 'brazil',
+  CHINA: 'china',
+  EGYPT: 'egypt',
+  ETHIOPIA: 'ethiopia',
+  FRANCE: 'france',
+  GERMANY: 'germany',
+  INDIA: 'india',
+  INDONESIA: 'indonesia',
+  IRAN: 'iran',
+  ITALY: 'italy',
+  JAPAN: 'japan',
+  MEXICO: 'mexico',
+  NIGERIA: 'nigeria',
+  PAKISTAN: 'pakistan',
+  PHILLIPINES: 'phillipines',
+  RUSSIA: 'russia',
+  TURKEY: 'turkey',
+  VIETNAM: 'vietnam',
+});
+const countries = Object.values(CountryEnum).slice(0, 3);
+
+const countryToAdjective = {
+  [ CountryEnum.BRAZIL ]: 'brazilian',
+  [ CountryEnum.CHINA ]: 'chinese',
+  [ CountryEnum.EGYPT ]: 'egyptian',
+  [ CountryEnum.ETHIOPIA ]: 'ethiopian',
+  [ CountryEnum.FRANCE ]: 'french',
+  [ CountryEnum.GERMANY ]: 'german',
+  [ CountryEnum.INDIA ]: 'indian',
+  [ CountryEnum.INDONESIA ]: 'indonesian',
+  [ CountryEnum.IRAN ]: 'iranian',
+  [ CountryEnum.ITALY ]: 'italian',
+  [ CountryEnum.JAPAN ]: 'japanese',
+  [ CountryEnum.MEXICO ]: 'mexican',
+  [ CountryEnum.NIGERIA ]: 'nigerian',
+  [ CountryEnum.PAKISTAN ]: 'pakistani',
+  [ CountryEnum.PHILLIPINES ]: 'filipino',
+  [ CountryEnum.RUSSIA ]: 'russian',
+  [ CountryEnum.TURKEY ]: 'turkish',
+  [ CountryEnum.VIETNAM ]: 'vietnamese',
+}
+
+countries.forEach((country) => {
+  if (!(country in countryToAdjective)) {
+    console.error(`No nationality information for ${country}. ` +
+      'Please update countryToAdjective in recommendations.js.');
+    process.exit(1);
+  }
+});
 
 async function main() {
   const pgClient = new PostgresClient({
@@ -33,37 +99,38 @@ async function main() {
     });
 
   //for (genre of genres) {
-    //for (nationality of nationalities) {
-      //console.log(`Seeding ${nationality} ${genre}`);
-      //await seedPlaylists(pgClient, spotifyApi, genre, nationality);
-      //await seedTracks(pgClient, spotifyApi, genre, nationality);
+    //for (country of countries) {
+      //console.log(`Seeding ${country} ${genre}`);
+      //await seedPlaylists(pgClient, spotifyApi, genre, country);
+      //await seedTracks(pgClient, spotifyApi, genre, country);
     //}
   //}
 
   //await recommendTracks(pgClient, spotifyApi, 'californication');
-  await listAllGenres(pgClient, spotifyApi);
+  //await listAllGenres(pgClient, spotifyApi);
   await pgClient.end();
 }
 
-async function seedPlaylists(pgClient, spotifyApi, genre, nationality) {
-  // TODO: Use maximum pagination.
-  return spotifyApi.searchPlaylists(`${nationality} ${genre}`).then((resp) => {
+async function seedPlaylists(pgClient, spotifyApi, genre, country) {
+  const nationality = countryToAdjective[country];
+
+  return spotifyApi.searchPlaylists(`${nationality} ${genre}`, { limit: 50 }).then((resp) => {
     const playlistSample = getRandomItems(resp.body.playlists.items, 5);
     return Promise.all(playlistSample.map((playlist) => {
       return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
-        [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, nationality]);
+        [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, country]);
     }));
   });
 }
 
-async function seedTracks(pgClient, spotifyApi, genre, nationality) {
+async function seedTracks(pgClient, spotifyApi, genre, country) {
   const playlists = await pgClient.query({
     text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2',
-    values: [genre, nationality]
+    values: [genre, country]
   });
   const playlistSample = getRandomItems(playlists.rows, 5);
   return Promise.all(playlistSample.map(async (playlist) => {
-    const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id);
+    const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id, { limit: 50 });
     const trackSample = getRandomItems(tracksResp.body.items, 10);
     return Promise.all(trackSample.map((track) => {
       if (!track.track || !track.track.id || !track.track.name ||
@@ -72,7 +139,7 @@ async function seedTracks(pgClient, spotifyApi, genre, nationality) {
       }
       return pgClient.query({
         text: 'INSERT INTO tracks(id, playlist_id, name, artist_id, genre, country) VALUES ($1, $2, $3, $4, $5, $6)',
-        values: [track.track.id, playlist.id, track.track.name, track.track.artists[0].id, genre, nationality],
+        values: [track.track.id, playlist.id, track.track.name, track.track.artists[0].id, genre, country],
       });
     }));
   }));
