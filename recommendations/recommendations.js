@@ -1,5 +1,6 @@
 const SpotifyWebApi = require('spotify-web-api-node');
 const PostgresClient = require('pg').Client;
+const secrets = require('./secrets');
 
 const GenreEnum = Object.freeze({
   ACOUSTIC: 'acoustic',
@@ -77,14 +78,14 @@ async function main() {
     user: 'foreign_music',
     host: 'foreign-music.c0prpxq16lno.us-east-2.redshift.amazonaws.com',
     database: 'prod',
-    password: 'i4X$dxzeGBAp',
+    password: secrets.pgPassword,
     port: 5439,
   });
   await pgClient.connect();
 
   const spotifyApi = new SpotifyWebApi({
     clientId: '33698d56449e4a8c9226f27573756d16',
-    clientSecret: 'b9daa0497ddf4aeba11fba6a1479c8c9',
+    clientSecret: secrets.spotifyClientSecret,
   });
 
   // Retrieve an access token.
