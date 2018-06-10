@@ -178,6 +178,9 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
   const seedTrackInfo = await spotifyApi.searchTracks(seedTrackName);
   const seedTrackArtistInfo = await spotifyApi.getArtist(seedTrackInfo.body.tracks.items[0].artists[0].id);
   const seedTrackGenres = seedTrackArtistInfo.body.genres;
+  console.log(`Seed tracks genres: ${seedTrackGenres}`);
+
+
   const availableGenres = await pgClient.query({
     text: 'SELECT DISTINCT country, genre FROM tracks',
   });
