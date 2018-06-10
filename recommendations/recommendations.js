@@ -32,24 +32,24 @@ async function main() {
       console.log('Something went wrong when retrieving an access token', err);
     });
 
-  await seedPlaylists(pgClient, spotifyApi);
+  for (genre of genres) {
+    for (nationality of nationalities) {
+      await seedPlaylists(pgClient, spotifyApi, genre, nationality);
+    }
+  }
+
   await pgClient.end();
 }
 
-async function seedPlaylists(pgClient, spotifyApi) {
-  return Promise.all(genres.map((genre) => {
-    return Promise.all(nationalities.map((nationality) => {
-      // TODO: Use maximum pagination.
-      return spotifyApi.searchPlaylists(`${nationality} ${genre}`).then((resp) => {
-        const playlistSample = getRandomItems(resp.body.playlists.items, 5);
-
-        return Promise.all(playlistSample.map((playlist) => {
-          return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
-            [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, nationality]);
-        }));
-      }, console.error);
+async function seedPlaylists(pgClient, spotifyApi, genre, nationality) {
+  // TODO: Use maximum pagination.
+  return spotifyApi.searchPlaylists(`${nationality} ${genre}`).then((resp) => {
+    const playlistSample = getRandomItems(resp.body.playlists.items, 5);
+    return Promise.all(playlistSample.map((playlist) => {
+      return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
+        [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, nationality]);
     }));
-  }));
+  });
 }
 
 async function seedTracks(pgClient, spotifyApi) {
