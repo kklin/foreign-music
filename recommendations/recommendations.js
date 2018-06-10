@@ -194,7 +194,6 @@ async function listAllGenres(pgClient, spotifyApi) {
   const genresSet = new Set();
   for (let i = 0; i < artistIds.rows.length; i += 50) {
     const ids = artistIds.rows.slice(i, i + 50).map(row => row.artist_id);
-    console.log(ids);
     const artists = await spotifyApi.getArtists(ids);
     artists.body.artists.forEach((artist) => {
       artist.genres.forEach(genre => genresSet.add(genre));
