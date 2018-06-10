@@ -241,9 +241,9 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
 
   const recommendations = await spotifyApi.getRecommendations({
     seed_tracks: [seedTrackInfo.body.tracks.items[0].id, foreignSeedTracks.rows[0].id],
+    limit: 10,
   });
-  // TODO: Limit responses in API call to getRecommendations.
-  recommendations.body.tracks.slice(0, 10).forEach(printTrack);
+  return Promise.all(recommendations.body.tracks.map(track => printTrack(spotifyApi, track)));
 }
 
 async function listAllGenres(pgClient, spotifyApi) {
