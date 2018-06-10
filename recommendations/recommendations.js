@@ -238,7 +238,6 @@ async function listAllGenres(pgClient, spotifyApi) {
 }
 
 async function analyzeSeedData(pgClient) {
-  const expNumTracks = 5 * 10;
   for (genre of genres) {
     for (country of countries) {
       const numTracksResp = await pgClient.query({
@@ -247,9 +246,9 @@ async function analyzeSeedData(pgClient) {
       });
       const numTracks = numTracksResp.rows[0].count;
 
-      if (numTracks < expNumTracks) {
+      if (numTracks < targetNumTracks) {
         console.log(`${country} ${genre} has ${numTracks} seed tracks. ` +
-          `Expected ${expNumTracks} tracks`);
+          `Expected ${targetNumTracks} tracks`);
       }
     }
   }
