@@ -98,18 +98,45 @@ async function main() {
       console.log('Something went wrong when retrieving an access token', err);
     });
 
-  //for (genre of genres) {
-    //for (country of countries) {
-      //console.log(`Seeding ${country} ${genre}`);
-      //await seedPlaylists(pgClient, spotifyApi, genre, country);
-      //await seedTracks(pgClient, spotifyApi, genre, country);
-    //}
-  //}
+  if (process.argv.length < 3) {
+    usage();
+  }
+  switch (process.argv[2]) {
+    case 'seed':
+      await seedDatabase(pgClient, spotifyApi);
+      break;
+    case 'recommend':
+      if (process.argv.length < 4) {
+        usage();
+      }
+      await recommendTracks(pgClient, spotifyApi, process.argv[3]);
+      break;
+    case 'list-genres':
+      await listAllGenres(pgClient, spotifyApi);
+      break;
+    case 'analyze-db':
+      await analyzeSeedData(pgClient);
+      break;
+    default:
+      usage();
+  }
 
-  //await recommendTracks(pgClient, spotifyApi, 'californication');
-  //await listAllGenres(pgClient, spotifyApi);
-  await analyzeSeedData(pgClient);
   await pgClient.end();
+}
+
+function usage() {
+  console.error(`${process.argv[0]} ${process.argv[1]} seed | recommend <search> | list-genres | analyze-db`);
+  process.exit(1);
+}
+
+async function seedDatabase(pgClient, spotifyApi) {
+  for (genre of genres) {
+    for (country of countries) {
+      console.log(`Seeding ${country} ${genre}`);
+      await seedPlaylists(pgClient, spotifyApi, genre, country);
+      await seedTracks(pgClient, spotifyApi, genre, country);
+    }
+  }
 }
 
 async function seedPlaylists(pgClient, spotifyApi, genre, country) {
