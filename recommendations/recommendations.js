@@ -116,6 +116,7 @@ async function main() {
         usage();
       }
       (await recommendTracks(pgClient, spotifyApi, process.argv[3]))
+        .filter(track => track.preview_url)
         .forEach(printTrack);
       break;
     case 'list-genres':
