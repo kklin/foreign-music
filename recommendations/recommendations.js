@@ -315,7 +315,7 @@ function getCountryForArtist(artist) {
       }
     }
   }
-  return 'UNKNOWN';
+  return null;
 }
 
 function getRandomItems(arr, n) {
