@@ -336,8 +336,20 @@ function getRandomNumber(n) {
   return Math.floor(Math.random() * n);
 }
 
-function printTrack(track) {
-  console.log(`${track.artists[0].name} - ${track.name} (${track.preview_url})`);
+async function printTrack(spotifyApi, track) {
+  const artistResp = await spotifyApi.getArtist(track.artists[0].id);
+  const artist = artistResp.body;
+  console.log(`${artist.name} - ${track.name} (${getCountryForArtist(artist)}) (${track.preview_url})`);
+}
+
+class Track {
+  constructor(id, name, artist_name, artist_id, artist_country) {
+    this.id = id;
+    this.name = name;
+    this.artist_name = artist_name;
+    this.artist_id = artist_id;
+    this.artist_country = artist_country;
+  }
 }
 
 main();
