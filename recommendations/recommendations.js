@@ -117,6 +117,12 @@ async function main() {
     case 'analyze-db':
       await analyzeSeedData(pgClient);
       break;
+    case 'analyze-artist':
+      if (process.argv.length < 4) {
+        usage();
+      }
+      await analyzeArtist(pgClient, spotifyApi, process.argv[3]);
+      break;
     default:
       usage();
   }
@@ -125,7 +131,7 @@ async function main() {
 }
 
 function usage() {
-  console.error(`${process.argv[0]} ${process.argv[1]} seed | recommend <search> | list-genres | analyze-db`);
+  console.error(`${process.argv[0]} ${process.argv[1]} seed | recommend <search> | list-genres | analyze-db | analyze-artist <artist>`);
   process.exit(1);
 }
 
@@ -254,11 +260,42 @@ async function analyzeSeedData(pgClient) {
   }
 }
 
+async function analyzeArtist(pgClient, spotifyApi, artistQuery) {
+  const artistResp = await spotifyApi.searchArtists(artistQuery);
+  if (artistResp.body.artists.items.length === 0) {
+    console.error(`Unable to find information for artist "${artistQuery}".`);
+    process.exit(1);
+  }
+  const artist = artistResp.body.artists.items[0];
+
+  console.log(`Name: ${artist.name}`);
+  console.log(`Genres: ${artist.genres}`);
+  console.log(`Country: ${getCountryForArtist(artist)}`);
+}
+
+const genreToCountry = {
+  'c-pop': CountryEnum.CHINA,
+  'mandopop': CountryEnum.CHINA,
+};
+
 function getCountryForArtist(artist) {
-  // Check if any genres contain the country string.
-  // Make case insensitive.
-  // Check for special cases, like c-pop.
-  // Return English by default.
+  for (genre of artist.genres) {
+    const lowerCaseGenre = genre.toLowerCase();
+
+    if (lowerCaseGenre in genreToCountry) {
+      return genreToCountry[lowerCaseGenre];
+    }
+
+    for (country of countries) {
+      if (lowerCaseGenre.includes(country.toLowerCase())) {
+        return country;
+      }
+      if (lowerCaseGenre.includes(countryToAdjective[country].toLowerCase())) {
+        return country;
+      }
+    }
+  }
+  return 'UNKNOWN';
 }
 
 function getRandomItems(arr, n) {
