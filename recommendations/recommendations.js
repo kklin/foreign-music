@@ -17,7 +17,7 @@ const GenreEnum = Object.freeze({
   REGGAE: 'reggae',
   ROCK: 'rock',
 });
-const genres = Object.values(GenreEnum).slice(0, 3);
+const genres = Object.values(GenreEnum);
 
 const CountryEnum = Object.freeze({
   BRAZIL: 'brazil',
