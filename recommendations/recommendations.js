@@ -66,6 +66,10 @@ async function seedTracks(pgClient, spotifyApi, genre, nationality) {
     const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id);
     const trackSample = getRandomItems(tracksResp.body.items, 10);
     return Promise.all(trackSample.map((track) => {
+      if (!track.track || !track.track.id || !track.track.name ||
+          track.track.artists.length == 0 || !track.track.artists[0].id) {
+        return;
+      }
       return pgClient.query({
         text: 'INSERT INTO tracks(id, playlist_id, name, artist_id, genre, country) VALUES ($1, $2, $3, $4, $5, $6)',
         values: [track.track.id, playlist.id, track.track.name, track.track.artists[0].id, genre, nationality],
@@ -120,8 +124,7 @@ async function listAllGenres(pgClient, spotifyApi) {
   const artistIds = await pgClient.query('SELECT DISTINCT artist_id FROM tracks');
   const genresSet = new Set();
   for (let i = 0; i < artistIds.rows.length; i += 50) {
-    // TODO: Why is ID null?
-    const ids = artistIds.rows.slice(i, i + 50).map(row => row.artist_id).filter((id) => id !== null);
+    const ids = artistIds.rows.slice(i, i + 50).map(row => row.artist_id);
     console.log(ids);
     const artists = await spotifyApi.getArtists(ids);
     artists.body.artists.forEach((artist) => {
