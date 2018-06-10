@@ -282,7 +282,7 @@ async function recommendTracks(pgClient, spotifyApi, userTrackName) {
     // more prone to SQL injection.
     const placeholders = seedTrackGenres.map((_, i) => '$' + (i + 1)).join(',');
     const seedsQuery = await pgClient.query({
-      text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders}) ORDER BY RANDOM() LIMIT 4`,
+      text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders}) ORDER BY RANDOM() LIMIT 8`,
       values: seedTrackGenres,
     });
     foreignSeedTypes = seedsQuery.rows;
