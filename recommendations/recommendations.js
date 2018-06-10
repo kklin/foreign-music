@@ -31,6 +31,7 @@ const CountryEnum = Object.freeze({
   IRAN: 'iran',
   ITALY: 'italy',
   JAPAN: 'japan',
+  KOREA: 'korea',
   MEXICO: 'mexico',
   NIGERIA: 'nigeria',
   PAKISTAN: 'pakistan',
@@ -53,6 +54,7 @@ const countryToAdjective = {
   [ CountryEnum.IRAN ]: 'iranian',
   [ CountryEnum.ITALY ]: 'italian',
   [ CountryEnum.JAPAN ]: 'japanese',
+  [ CountryEnum.KOREA ]: 'korean',
   [ CountryEnum.MEXICO ]: 'mexican',
   [ CountryEnum.NIGERIA ]: 'nigerian',
   [ CountryEnum.PAKISTAN ]: 'pakistani',
@@ -122,6 +124,19 @@ async function main() {
         usage();
       }
       await analyzeArtist(pgClient, spotifyApi, process.argv[3]);
+      break;
+    case 'analyze-db-track-countries':
+      const artistIds = await pgClient.query('SELECT DISTINCT artist_id FROM tracks LIMIT 100');
+      for (let i = 0; i < artistIds.rows.length; i += 50) {
+        const ids = artistIds.rows.slice(i, i + 50).map(row => row.artist_id);
+        const artists = await spotifyApi.getArtists(ids);
+        artists.body.artists.forEach((artist) => {
+          if (artist.genres.length == 0) {
+            return;
+          }
+          console.log(`${artist.name} (${artist.genres}): ${getCountryForArtist(artist)}`);
+        });
+      }
       break;
     default:
       usage();
@@ -275,15 +290,20 @@ async function analyzeArtist(pgClient, spotifyApi, artistQuery) {
 
 const genreToCountry = {
   'c-pop': CountryEnum.CHINA,
+  'carioca': CountryEnum.BRAZIL,
   'mandopop': CountryEnum.CHINA,
+  'k-pop': CountryEnum.KOREA,
+  'j-rock': CountryEnum.JAPAN,
 };
 
 function getCountryForArtist(artist) {
   for (genre of artist.genres) {
     const lowerCaseGenre = genre.toLowerCase();
 
-    if (lowerCaseGenre in genreToCountry) {
-      return genreToCountry[lowerCaseGenre];
+    for (genreString of Object.keys(genreToCountry)) {
+      if (lowerCaseGenre.includes(genreString)) {
+        return genreToCountry[genreString];
+      }
     }
 
     for (country of countries) {
