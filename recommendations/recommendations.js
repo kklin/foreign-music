@@ -43,7 +43,7 @@ const CountryEnum = Object.freeze({
   TURKEY: 'turkey',
   VIETNAM: 'vietnam',
 });
-const countries = Object.values(CountryEnum).slice(0, 3);
+const countries = Object.values(CountryEnum);
 
 const countryToAdjective = {
   [ CountryEnum.BRAZIL ]: 'brazilian',
@@ -157,8 +157,20 @@ function usage() {
 }
 
 async function seedDatabase(pgClient, spotifyApi) {
+  const seededTypesResp = await pgClient.query({
+    text: `SELECT DISTINCT country, genre FROM tracks`,
+  });
+  const seededTypes = new Set();
+  seededTypesResp.rows.forEach((row) => {
+    seededTypes.add(row);
+  });
+
   for (genre of genres) {
     for (country of countries) {
+      if (seededTypes.has({genre, country})) {
+        console.log(`${country} ${genre} already seeded. Skipping.`)
+      }
+
       console.log(`Seeding ${country} ${genre}`);
       await seedPlaylists(pgClient, spotifyApi, genre, country);
       await seedTracks(pgClient, spotifyApi, genre, country);
