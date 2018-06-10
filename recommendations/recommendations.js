@@ -129,6 +129,7 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
     text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2',
     values: [genre, country]
   });
+  // TODO: Sample playlist more heavily if there aren't that many playlists.
   const playlistSample = getRandomItems(playlists.rows, 5);
   return Promise.all(playlistSample.map(async (playlist) => {
     const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id, { limit: 50 });
