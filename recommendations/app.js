@@ -43,6 +43,32 @@ app.use(express.static(__dirname + '/public'))
    .use(cors())
    .use(cookieParser());
 
+const mockRecommendations = [
+  {
+    id: 'track_id',
+    name: 'track_name',
+    country: 'country',
+    artists: [
+      {
+        name: 'artist_name',
+        id: 'artist_id',
+      },
+    ],
+  },
+];
+
+app.get('/api/recommendation/:seed', function(req, res) {
+  const userTrackId = req.params.seed;
+  if (userTrackId === 'error') {
+    res.status(500).json({
+      type: 'error',
+      message: 'error',
+    });
+    return;
+  }
+  res.json(mockRecommendations);
+});
+
 app.get('/login', function(req, res) {
   const state = generateRandomString(16);
   res.cookie(stateKey, state);
