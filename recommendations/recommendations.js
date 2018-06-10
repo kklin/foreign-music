@@ -319,6 +319,7 @@ async function recommendTracks(pgClient, spotifyApi, userTrackName) {
     try {
       const recommendationsResp = await spotifyApi.getRecommendations({
         seed_tracks: [userTrackInfo.id, foreignSeedTracks[0].id],
+        // TODO: Are these sorted somehow? Would it benefit us to use a lower limit?
         limit: 50,
       });
       recommendations = recommendationsResp.body.tracks;
