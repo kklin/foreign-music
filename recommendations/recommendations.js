@@ -115,9 +115,9 @@ async function main() {
       if (process.argv.length < 4) {
         usage();
       }
-      (await recommendTracks(pgClient, spotifyApi, process.argv[3]))
-        .filter(track => track.preview_url)
-        .forEach(printTrack);
+      const recommendations = (await recommendTracks(pgClient, spotifyApi, process.argv[3]))
+        .filter(track => track.preview_url);
+      getRandomItems(recommendations, 15).forEach(printTrack);
       break;
     case 'list-genres':
       await listAllGenres(pgClient, spotifyApi);
@@ -157,13 +157,19 @@ function usage() {
 }
 
 async function seedDatabase(pgClient, spotifyApi) {
-  const seededTypesResp = await pgClient.query({
-    text: `SELECT DISTINCT country, genre FROM tracks`,
-  });
   const seededTypes = new Set();
-  seededTypesResp.rows.forEach((row) => {
-    seededTypes.add(row);
-  });
+  try {
+    const seededTypesResp = await pgClient.query({
+      text: `SELECT DISTINCT country, genre FROM tracks`,
+    });
+    seededTypesResp.rows.forEach((row) => {
+      seededTypes.add(row);
+    });
+  } catch (err) {
+    console.error('Failed to get currently seeded tracks. ' +
+      'Going to assume the database is empty.');
+    console.error(err);
+  }
 
   for (genre of genres) {
     for (country of countries) {
@@ -172,8 +178,17 @@ async function seedDatabase(pgClient, spotifyApi) {
       }
 
       console.log(`Seeding ${country} ${genre}`);
-      await seedPlaylists(pgClient, spotifyApi, genre, country);
-      await seedTracks(pgClient, spotifyApi, genre, country);
+      try {
+        await seedPlaylists(pgClient, spotifyApi, genre, country);
+      } catch (err) {
+        console.error(`Unexpected error while seeding playlists. Going to try to continue seeding tracks anyways. ${err}`);
+      }
+
+      try {
+        await seedTracks(pgClient, spotifyApi, genre, country);
+      } catch (err) {
+        console.error(`Unexpected error while seeding tracks: ${err}`);
+      }
     }
   }
 }
@@ -181,33 +196,61 @@ async function seedDatabase(pgClient, spotifyApi) {
 async function seedPlaylists(pgClient, spotifyApi, genre, country) {
   const nationality = countryToAdjective[country];
 
-  return spotifyApi.searchPlaylists(`${nationality} ${genre}`, { limit: 50 }).then((resp) => {
-    const playlistSample = getRandomItems(resp.body.playlists.items, 5);
-    return Promise.all(playlistSample.map((playlist) => {
-      return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
-        [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, country]);
-    }));
-  });
+  let playlists;
+  try {
+    const playlistsResp = await spotifyApi.searchPlaylists(`${nationality} ${genre}`, { limit: 50 })
+    playlists = playlistsResp.body.playlists.items;
+  } catch (err) {
+    console.error(`Failed to search playlists for ${country} ${genre}: ${err}`);
+    return;
+  }
+
+  const playlistSample = getRandomItems(playlists, 5);
+  return Promise.all(playlistSample.map((playlist) => {
+    return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
+      [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, country]);
+  }));
 }
 
 const targetNumPlaylists = 5;
 const targetNumTracks = 50;
 
 async function seedTracks(pgClient, spotifyApi, genre, country) {
-  const playlists = await pgClient.query({
-    text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2 LIMIT $3',
-    values: [genre, country, targetNumPlaylists]
-  });
+  let playlists;
+  try {
+    const playlistsQuery = await pgClient.query({
+      text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2 LIMIT $3',
+      values: [genre, country, targetNumPlaylists]
+    });
+    playlists = playlistsQuery.rows;
+  } catch (err) {
+    console.error(`Failed to retrieve playlists for ${genre} ${country} from database: ${err}`);
+    return;
+  }
 
-  const playlistSample = getRandomItems(playlists.rows, targetNumPlaylists);
+  if (playlists.length == 0) {
+    console.error(`No playlists in database for ${genre} ${country}`);
+    return;
+  }
+
+  const playlistSample = getRandomItems(playlists, targetNumPlaylists);
   const numTracksPerPlaylist = Math.ceil(targetNumTracks / playlistSample.length);
   return Promise.all(playlistSample.map(async (playlist) => {
-    const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id, { limit: 50 });
-    const trackSample = getRandomItems(
-      tracksResp.body.items.filter((track) => {
-        return track.track && track.track.id && track.track.name &&
-          track.track.artists.length != 0 && track.track.artists[0].id;
-      }), 10);
+    let tracks;
+    try {
+      const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id, { limit: 50 });
+      tracks = tracksResp.body.items;
+    } catch (err) {
+      console.error(`Failed to get playlist tracks: ${err}`);
+      return;
+    }
+
+    const usableTracks = tracks.filter((track) => {
+      return track.track && track.track.id && track.track.name &&
+        track.track.artists.length != 0 && track.track.artists[0].id;
+    });
+    const trackSample = getRandomItems(usableTracks, 10);
+
     return Promise.all(trackSample.map((track) => {
       return pgClient.query({
         text: 'INSERT INTO tracks(id, playlist_id, name, artist_id, genre, country) VALUES ($1, $2, $3, $4, $5, $6)',
@@ -217,45 +260,86 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
   }));
 }
 
-async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
-  const seedTrackInfo = await spotifyApi.searchTracks(seedTrackName);
-  const seedTrackArtistInfo = await spotifyApi.getArtist(seedTrackInfo.body.tracks.items[0].artists[0].id);
+async function recommendTracks(pgClient, spotifyApi, userTrackName) {
+  let searchResult;
+  try {
+    searchResult = await spotifyApi.searchTracks(userTrackName);
+  } catch (err) {
+    throw new Error(`Failed to search for user track`);
+  }
+
+  if (searchResult.body.tracks.items === 0) {
+    throw new Error('No results for track');
+  }
+  const userTrackInfo = searchResult.body.tracks.items[0];
+
+  const seedTrackArtistInfo = await spotifyApi.getArtist(userTrackInfo.artists[0].id);
   const seedTrackGenres = seedTrackArtistInfo.body.genres;
 
-  // TODO: Not sure why WHERE genre = ANY($1) isn't working. The current way is
-  // more prone to SQL injection.
-  const placeholders = seedTrackGenres.map((_, i) => '$' + (i + 1)).join(',');
-  const foreignSeedTypes = await pgClient.query({
-    text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders}) ORDER BY RANDOM() LIMIT 4`,
-    values: seedTrackGenres,
-  });
+  let foreignSeedTypes;
+  try {
+    // TODO: Not sure why WHERE genre = ANY($1) isn't working. The current way is
+    // more prone to SQL injection.
+    const placeholders = seedTrackGenres.map((_, i) => '$' + (i + 1)).join(',');
+    const seedsQuery = await pgClient.query({
+      text: `SELECT DISTINCT country, genre FROM tracks WHERE genre IN (${placeholders}) ORDER BY RANDOM() LIMIT 4`,
+      values: seedTrackGenres,
+    });
+    foreignSeedTypes = seedsQuery.rows;
+  } catch (err) {
+    throw new Error(`Failed to query database for seed tracks: ${err}`)
+  }
 
-  if (foreignSeedTypes.rows.length === 0) {
+  if (foreignSeedTypes.length === 0) {
     throw new Error('No seed data');
   }
 
-  const recommendations = [];
-  await Promise.all(foreignSeedTypes.rows.map(async (foreignSeedType) => {
-    const foreignSeedTracks = await pgClient.query({
-      text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 ORDER BY RANDOM() LIMIT 1',
-      values: [foreignSeedType.genre, foreignSeedType.country],
-    });
+  const allRecommendations = [];
+  await Promise.all(foreignSeedTypes.map(async (foreignSeedType) => {
+    let foreignSeedTracks;
+    try {
+      const tracksQuery = await pgClient.query({
+        text: 'SELECT id FROM tracks WHERE genre = $1 AND country = $2 ORDER BY RANDOM() LIMIT 1',
+        values: [foreignSeedType.genre, foreignSeedType.country],
+      });
+      foreignSeedTracks = tracksQuery.rows;
+    } catch (err) {
+      console.error('Failed to query database for seed tracks for ' +
+        `${foreignSeedType.country} ${foreignSeedType.genre}: ${err}. Skipping.`)
+      return;
+    }
 
-    if (foreignSeedTracks.rows.length === 0) {
-      throw new Error('No seed data');
+    if (foreignSeedTracks.length === 0) {
+      console.error(`No seed data for ${foreignSeedType.country} ${foreignSeedType.genre}. Skipping.`);
+      return;
     }
 
     console.log(`Getting recommendations for seed ${foreignSeedType.country} ${foreignSeedType.genre}`);
-    const recommendationsResp = await spotifyApi.getRecommendations({
-      seed_tracks: [seedTrackInfo.body.tracks.items[0].id, foreignSeedTracks.rows[0].id],
-      limit: 50,
-    });
+    let recommendations;
+    try {
+      const recommendationsResp = await spotifyApi.getRecommendations({
+        seed_tracks: [userTrackInfo.id, foreignSeedTracks[0].id],
+        limit: 50,
+      });
+      recommendations = recommendationsResp.body.tracks;
+    } catch (err) {
+      // TODO: Should these be thrown errors?
+      console.error('Failed to get Spotify recommendations for tracks ' +
+        `(${userTrackInfo.id}, foreignSeedTracks[0].id): ${err}`);
+      return;
+    }
 
-    recommendations.push(
-      ...(await analyzeTracks(pgClient, spotifyApi, recommendationsResp.body.tracks))
+    let recommendationsWithCountry;
+    try {
+      recommendationsWithCountry = await analyzeTracks(pgClient, spotifyApi, recommendations);
+    } catch (err) {
+      throw new Error(`Failed to get country information: ${err}`);
+    }
+    allRecommendations.push(
+      ...recommendationsWithCountry
       .filter(track => track.country));
   }));
-  return recommendations;
+  return allRecommendations;
 }
 
 async function listAllGenres(pgClient, spotifyApi) {
