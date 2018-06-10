@@ -132,12 +132,12 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
   const playlistSample = getRandomItems(playlists.rows, 5);
   return Promise.all(playlistSample.map(async (playlist) => {
     const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id, { limit: 50 });
-    const trackSample = getRandomItems(tracksResp.body.items, 10);
+    const trackSample = getRandomItems(
+      tracksResp.body.items.filter((track) => {
+        return track.track && track.track.id && track.track.name &&
+          track.track.artists.length != 0 && track.track.artists[0].id;
+      }), 10);
     return Promise.all(trackSample.map((track) => {
-      if (!track.track || !track.track.id || !track.track.name ||
-          track.track.artists.length == 0 || !track.track.artists[0].id) {
-        return;
-      }
       return pgClient.query({
         text: 'INSERT INTO tracks(id, playlist_id, name, artist_id, genre, country) VALUES ($1, $2, $3, $4, $5, $6)',
         values: [track.track.id, playlist.id, track.track.name, track.track.artists[0].id, genre, country],
