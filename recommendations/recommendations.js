@@ -229,8 +229,7 @@ async function recommendTracks(pgClient, spotifyApi, seedTrackName) {
     });
 
     if (foreignSeedTracks.rows.length === 0) {
-      console.error(`No seed tracks for ${foreignSeedType}`);
-      return;
+      throw new Error('No seed data');
     }
 
     console.log(`Getting recommendations for seed ${foreignSeedType.country} ${foreignSeedType.genre}`);
