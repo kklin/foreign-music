@@ -151,13 +151,17 @@ async function seedPlaylists(pgClient, spotifyApi, genre, country) {
   });
 }
 
+const targetNumPlaylists = 5;
+const targetNumTracks = 50;
+
 async function seedTracks(pgClient, spotifyApi, genre, country) {
   const playlists = await pgClient.query({
-    text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2',
-    values: [genre, country]
+    text: 'SELECT * FROM playlists WHERE genre = $1 AND country = $2 LIMIT $3',
+    values: [genre, country, targetNumPlaylists]
   });
-  // TODO: Sample playlist more heavily if there aren't that many playlists.
-  const playlistSample = getRandomItems(playlists.rows, 5);
+
+  const playlistSample = getRandomItems(playlists.rows, targetNumPlaylists);
+  const numTracksPerPlaylist = Math.ceil(targetNumTracks / playlistSample.length);
   return Promise.all(playlistSample.map(async (playlist) => {
     const tracksResp = await spotifyApi.getPlaylistTracks(playlist.owner_id, playlist.id, { limit: 50 });
     const trackSample = getRandomItems(
