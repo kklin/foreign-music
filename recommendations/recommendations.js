@@ -37,10 +37,6 @@ async function main() {
 }
 
 async function seedPlaylists(pgClient, spotifyApi) {
-  //spotifyApi.searchArtists('Daniel Caesar').then((resp) => {
-  //console.log(resp.body.artists.items[0]);
-  //}, console.log);
-
   return Promise.all(genres.map((genre) => {
     return Promise.all(nationalities.map((nationality) => {
       // TODO: Use maximum pagination.
@@ -51,28 +47,9 @@ async function seedPlaylists(pgClient, spotifyApi) {
           return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
             [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, nationality]);
         }));
-        // Get the artist information for each track. Use a cache.
-        // Save the artist information. Their name, ID, popularity, occurences in search, genres.
       }, console.error);
     }));
   }));
-
-  //spotifyApi.searchTracks('Best Part (feat H.E.R.)').then((resp) => {
-  //console.log(resp.body.tracks.items);
-  //}, console.log);
-
-  //spotifyApi.getRecommendations({
-  //seed_artists: '7Dx7RhX0mFuXhCOUgB01uM', // JJ Lin.
-  //seed_artists: '1dVygo6tRFXC8CSWURQJq2', // Sonu Nigam.
-  //seed_tracks: '1RMJOxR6GRPsBHL8qeC2ux', // Best part
-  //}).then((resp) => {
-  //console.log('Recommended tracks');
-  //resp.body.tracks.forEach((track) => {
-  //const artists = spotifyApi.getArtist(track.artists[0].id).then((artist) => {
-  //console.log(`${track.artists[0].name} - ${track.name} (${artist.body.genres})`);
-  //})
-  //});
-  //}, console.log);
 }
 
 async function seedTracks(pgClient, spotifyApi) {
