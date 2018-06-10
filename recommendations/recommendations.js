@@ -51,17 +51,6 @@ async function seedPlaylists(pgClient, spotifyApi) {
           return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
             [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, nationality]);
         }));
-
-        // For each playlist, get 10 random tracks.
-        // TODO: Use maximum pagination.
-        //playlistSample.forEach((playlist) => {
-        //spotifyApi.getPlaylistTracks(playlist.owner.id, playlist.id).then((resp) => {
-        // Save track information to database.
-        //const trackSample = getRandomItems(resp.body.items, 10);
-        //console.log(trackSample);
-        //});
-        //});
-
         // Get the artist information for each track. Use a cache.
         // Save the artist information. Their name, ID, popularity, occurences in search, genres.
       }, console.error);
@@ -84,6 +73,18 @@ async function seedPlaylists(pgClient, spotifyApi) {
   //})
   //});
   //}, console.log);
+}
+
+async function seedTracks(pgClient, spotifyApi) {
+  // For each playlist, get 10 random tracks.
+  // TODO: Use maximum pagination.
+  //playlistSample.forEach((playlist) => {
+  //spotifyApi.getPlaylistTracks(playlist.owner.id, playlist.id).then((resp) => {
+  // Save track information to database.
+  //const trackSample = getRandomItems(resp.body.items, 10);
+  //console.log(trackSample);
+  //});
+  //});
 }
 
 function getRandomItems(arr, n) {
