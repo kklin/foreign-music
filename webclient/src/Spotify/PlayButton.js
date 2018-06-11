@@ -7,7 +7,7 @@ export default class PlayButton extends Component {
     this.startPlayback = this.startPlayback.bind(this);
   }
 
-  async componentWillMount() {
+  componentWillMount() {
     this.webApiInstance = new SpotifyWebApi();
     this.webApiInstance.setAccessToken(this.props.userAccessToken);
   }

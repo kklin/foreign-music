@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import WebPlaybackReact from './Spotify/WebPlaybackReact.js';
 import TrackSelector from './Spotify/TrackSelector.js';
+import Search from './Spotify/Search.js';
 import axios from 'axios';
 
 import './App.css';
@@ -52,7 +53,7 @@ export default class App extends Component {
   }
 
   async getRecommendations() {
-    const recommendations = await axios.get('http://localhost:8888/api/recommendation/foo');
+    const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${this.state.userSeedTrack}`);
     this.setState({
       recommendations: recommendations.data.tracks,
     });
@@ -62,6 +63,7 @@ export default class App extends Component {
     let {
       userDeviceId,
       userAccessToken,
+      userSeedTrack,
       playerState
     } = this.state;
 
@@ -82,7 +84,10 @@ export default class App extends Component {
 
         <main>
           {!userAccessToken && <IntroScreen />}
-          {userAccessToken && userDeviceId &&
+          {userAccessToken &&
+            <Search userAccessToken={userAccessToken} onSelectedCallback={val => this.setState({userSeedTrack: val})}/>
+          }
+          {userAccessToken && userDeviceId && userSeedTrack &&
             <button onClick={this.getRecommendations}>Get Recommendations</button>
           }
           {userAccessToken && userDeviceId && this.state.recommendations &&
