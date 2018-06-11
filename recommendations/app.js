@@ -46,12 +46,23 @@ app.use(express.static(__dirname + '/public'))
 
 const mockRecommendations = [
   {
-    id: 'track_id',
-    name: 'track_name',
-    country: 'country',
+    id: '1301WleyT98MSxVHPZCA6M',
+    name: 'Piano Sonata No. 2 in B-Flat Minor, Op. 35: Grave; Doppio movimento',
+    country: 'Poland',
     artists: [
       {
-        name: 'artist_name',
+        name: 'Frederic Chopin',
+        id: 'artist_id',
+      },
+    ],
+  },
+  {
+    id: '4iV5W9uYEdYUVa79Axb7Rh',
+    name: 'Prelude for Piano No. 11 in F-Sharp Minor',
+    country: 'Russia',
+    artists: [
+      {
+        name: 'Eduard Abramyan',
         id: 'artist_id',
       },
     ],
@@ -67,7 +78,9 @@ app.get('/api/recommendation/:seed', function(req, res) {
     });
     return;
   }
-  res.json(mockRecommendations);
+  res.json({
+    tracks: mockRecommendations
+  });
 });
 
 app.get('/login', function(req, res) {

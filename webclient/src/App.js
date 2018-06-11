@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import WebPlaybackReact from './Spotify/WebPlaybackReact.js';
 import TrackSelector from './Spotify/TrackSelector.js';
+import axios from 'axios';
 
 import './App.css';
 import Header from './layout/Header.js';
@@ -20,6 +21,11 @@ export default class App extends Component {
 
     // Player state
     playerState: null
+  }
+
+  constructor() {
+    super();
+    this.getRecommendations = this.getRecommendations.bind(this);
   }
 
   componentWillMount() {
@@ -45,6 +51,13 @@ export default class App extends Component {
     console.error("The user access token has expired.");
   }
 
+  async getRecommendations() {
+    const recommendations = await axios.get('http://localhost:8888/api/recommendation/foo');
+    this.setState({
+      recommendations: recommendations.data.tracks,
+    });
+  }
+
   render() {
     let {
       userDeviceId,
@@ -63,31 +76,6 @@ export default class App extends Component {
       onPlayerError: (playerError => console.error(playerError))
     };
 
-    const mockTracks = [
-      {
-        id: '1301WleyT98MSxVHPZCA6M',
-        name: 'Piano Sonata No. 2 in B-Flat Minor, Op. 35: Grave; Doppio movimento',
-        country: 'Poland',
-        artists: [
-          {
-            name: 'Frederic Chopin',
-            id: 'artist_id',
-          },
-        ],
-      },
-      {
-        id: '4iV5W9uYEdYUVa79Axb7Rh',
-        name: 'Prelude for Piano No. 11 in F-Sharp Minor',
-        country: 'Russia',
-        artists: [
-          {
-            name: 'Eduard Abramyan',
-            id: 'artist_id',
-          },
-        ],
-      },
-    ];
-
     return (
       <div className="App">
         <Header />
@@ -95,7 +83,10 @@ export default class App extends Component {
         <main>
           {!userAccessToken && <IntroScreen />}
           {userAccessToken && userDeviceId &&
-            <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={mockTracks}/>
+            <button onClick={this.getRecommendations}>Get Recommendations</button>
+          }
+          {userAccessToken && userDeviceId && this.state.recommendations &&
+            <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={this.state.recommendations}/>
           }
           {userAccessToken &&
             <WebPlaybackReact {...webPlaybackSdkProps}>
