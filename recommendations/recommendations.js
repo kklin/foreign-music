@@ -15,6 +15,7 @@ const GenreEnum = Object.freeze({
   POP: 'pop',
   PUNK: 'punk',
   RAP: 'rap',
+  RNB: 'r&b', // TODO: Seed database with this.
   REGGAE: 'reggae',
   ROCK: 'rock',
   SOUL: 'soul',
