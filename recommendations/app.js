@@ -46,16 +46,14 @@ async function main() {
   });
 
   // Retrieve an access token.
-  // TODO: This will probably be switched to Authorization
-  // Code Flow from Client Credential Flow once user authentication is needed
-  // (for playing music, and saving music to their library).
   await spotifyApi.clientCredentialsGrant().then(
     (data) => {
       // Save the access token so that it's used in future calls
+      // TODO: Refresh the access token when it expires.
       spotifyApi.setAccessToken(data.body['access_token']);
     },
     (err) => {
-      console.log('Something went wrong when retrieving an access token', err);
+      console.error('Something went wrong when retrieving an access token', err);
     });
 
   const app = newApp(pgClient, spotifyApi);
