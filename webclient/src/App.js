@@ -63,6 +63,31 @@ export default class App extends Component {
       onPlayerError: (playerError => console.error(playerError))
     };
 
+    const mockTracks = [
+      {
+        id: '1301WleyT98MSxVHPZCA6M',
+        name: 'Piano Sonata No. 2 in B-Flat Minor, Op. 35: Grave; Doppio movimento',
+        country: 'Poland',
+        artists: [
+          {
+            name: 'Frederic Chopin',
+            id: 'artist_id',
+          },
+        ],
+      },
+      {
+        id: '4iV5W9uYEdYUVa79Axb7Rh',
+        name: 'Prelude for Piano No. 11 in F-Sharp Minor',
+        country: 'Russia',
+        artists: [
+          {
+            name: 'Eduard Abramyan',
+            id: 'artist_id',
+          },
+        ],
+      },
+    ];
+
     return (
       <div className="App">
         <Header />
@@ -70,7 +95,7 @@ export default class App extends Component {
         <main>
           {!userAccessToken && <IntroScreen />}
           {userAccessToken && userDeviceId &&
-            <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} />
+            <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={mockTracks}/>
           }
           {userAccessToken &&
             <WebPlaybackReact {...webPlaybackSdkProps}>
