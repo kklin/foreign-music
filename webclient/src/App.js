@@ -53,6 +53,7 @@ export default class App extends Component {
   }
 
   async getRecommendations() {
+    // TODO: Set a loading state in UI while request is in flight.
     const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${this.state.userSeedTrack}`);
     this.setState({
       recommendations: recommendations.data.tracks,

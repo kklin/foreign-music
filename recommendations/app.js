@@ -13,6 +13,9 @@ var cors = require('cors');
 var querystring = require('querystring');
 var cookieParser = require('cookie-parser');
 const secrets = require('./secrets');
+const {recommendTracks} = require('./recommendations');
+const SpotifyWebApi = require('spotify-web-api-node');
+const PostgresClient = require('pg').Client;
 
 // TODO: Set these via environment variables.
 var client_id = '33698d56449e4a8c9226f27573756d16'; // Your client id
@@ -38,149 +41,179 @@ var generateRandomString = function(length) {
 
 var stateKey = 'spotify_auth_state';
 
-var app = express();
+function newApp(pgClient, spotifyApi) {
+  var app = express();
 
-app.use(express.static(__dirname + '/public'))
-   .use(cors())
-   .use(cookieParser());
+  app.use(express.static(__dirname + '/public'))
+    .use(cors())
+    .use(cookieParser());
 
-const mockRecommendations = [
-  {
-    id: '1301WleyT98MSxVHPZCA6M',
-    name: 'Piano Sonata No. 2 in B-Flat Minor, Op. 35: Grave; Doppio movimento',
-    country: 'Poland',
-    artists: [
-      {
-        name: 'Frederic Chopin',
-        id: 'artist_id',
-      },
-    ],
-  },
-  {
-    id: '4iV5W9uYEdYUVa79Axb7Rh',
-    name: 'Prelude for Piano No. 11 in F-Sharp Minor',
-    country: 'Russia',
-    artists: [
-      {
-        name: 'Eduard Abramyan',
-        id: 'artist_id',
-      },
-    ],
-  },
-];
+  const mockRecommendations = [
+    {
+      id: '1301WleyT98MSxVHPZCA6M',
+      name: 'Piano Sonata No. 2 in B-Flat Minor, Op. 35: Grave; Doppio movimento',
+      country: 'Poland',
+      artists: [
+        {
+          name: 'Frederic Chopin',
+          id: 'artist_id',
+        },
+      ],
+    },
+    {
+      id: '4iV5W9uYEdYUVa79Axb7Rh',
+      name: 'Prelude for Piano No. 11 in F-Sharp Minor',
+      country: 'Russia',
+      artists: [
+        {
+          name: 'Eduard Abramyan',
+          id: 'artist_id',
+        },
+      ],
+    },
+  ];
 
-app.get('/api/recommendation/:seed', function(req, res) {
-  const userTrackId = req.params.seed;
-  if (userTrackId === 'error') {
-    res.status(500).json({
-      type: 'error',
-      message: 'error',
+  app.get('/api/recommendation/:seed', async function(req, res) {
+    const userTrackId = req.params.seed;
+    const recommendations = await recommendTracks(pgClient, spotifyApi, req.params.seed);
+    res.json({
+      tracks: recommendations,
     });
-    return;
-  }
-  res.json({
-    tracks: mockRecommendations
   });
-});
 
-app.get('/login', function(req, res) {
-  const state = generateRandomString(16);
-  res.cookie(stateKey, state);
+  app.get('/login', function(req, res) {
+    const state = generateRandomString(16);
+    res.cookie(stateKey, state);
 
-  // your application requests authorization
-  const scope = 'user-read-private user-read-email';
-  res.redirect('https://accounts.spotify.com/authorize?' +
-    querystring.stringify({
-      response_type: 'code',
-      client_id,
-      scope,
-      redirect_uri,
-      state,
-    }));
-});
-
-app.get('/callback', function(req, res) {
-
-  // your application requests refresh and access tokens
-  // after checking the state parameter
-
-  const code = req.query.code || null;
-  const state = req.query.state || null;
-  const storedState = req.cookies ? req.cookies[stateKey] : null;
-
-  if (state === null || state !== storedState) {
-    res.redirect('/#' +
+    // your application requests authorization
+    const scope = 'user-read-private user-read-email';
+    res.redirect('https://accounts.spotify.com/authorize?' +
       querystring.stringify({
-        error: 'state_mismatch'
-      }));
-  } else {
-    res.clearCookie(stateKey);
-    const authOptions = {
-      url: 'https://accounts.spotify.com/api/token',
-      form: {
-        code,
+        response_type: 'code',
+        client_id,
+        scope,
         redirect_uri,
-        grant_type: 'authorization_code'
-      },
-      headers: {
-        'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+        state,
+      }));
+  });
+
+  app.get('/callback', function(req, res) {
+
+    // your application requests refresh and access tokens
+    // after checking the state parameter
+
+    const code = req.query.code || null;
+    const state = req.query.state || null;
+    const storedState = req.cookies ? req.cookies[stateKey] : null;
+
+    if (state === null || state !== storedState) {
+      res.redirect('/#' +
+        querystring.stringify({
+          error: 'state_mismatch'
+        }));
+    } else {
+      res.clearCookie(stateKey);
+      const authOptions = {
+        url: 'https://accounts.spotify.com/api/token',
+        form: {
+          code,
+          redirect_uri,
+          grant_type: 'authorization_code'
+        },
+        headers: {
+          'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
+        },
+        json: true
+      };
+
+      request.post(authOptions, function(error, response, body) {
+        if (error || response.statusCode !== 200) {
+          res.redirect('/#' +
+            querystring.stringify({
+              error: 'invalid_token'
+            }));
+          return;
+        }
+
+        var options = {
+          url: 'https://api.spotify.com/v1/me',
+          headers: { 'Authorization': 'Bearer ' + body.access_token },
+          json: true
+        };
+
+        // use the access token to access the Spotify Web API
+        request.get(options, function(error, response, body) {
+          console.log(body);
+        });
+
+        // we can also pass the token to the browser to make requests from there
+        res.redirect('/#' +
+          querystring.stringify({
+            access_token: body.access_token,
+            refresh_token: body.refresh_token,
+          }));
+      });
+    }
+  });
+
+  app.get('/refresh_token', function(req, res) {
+
+    // requesting access token from refresh token
+    var refresh_token = req.query.refresh_token;
+    var authOptions = {
+      url: 'https://accounts.spotify.com/api/token',
+      headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
+      form: {
+        grant_type: 'refresh_token',
+        refresh_token: refresh_token
       },
       json: true
     };
 
     request.post(authOptions, function(error, response, body) {
-      if (error || response.statusCode !== 200) {
-        res.redirect('/#' +
-          querystring.stringify({
-            error: 'invalid_token'
-          }));
-        return;
+      if (!error && response.statusCode === 200) {
+        var access_token = body.access_token;
+        res.send({
+          'access_token': access_token
+        });
       }
-
-      var options = {
-        url: 'https://api.spotify.com/v1/me',
-        headers: { 'Authorization': 'Bearer ' + body.access_token },
-        json: true
-      };
-
-      // use the access token to access the Spotify Web API
-      request.get(options, function(error, response, body) {
-        console.log(body);
-      });
-
-      // we can also pass the token to the browser to make requests from there
-      res.redirect('/#' +
-        querystring.stringify({
-          access_token: body.access_token,
-          refresh_token: body.refresh_token,
-        }));
     });
-  }
-});
-
-app.get('/refresh_token', function(req, res) {
-
-  // requesting access token from refresh token
-  var refresh_token = req.query.refresh_token;
-  var authOptions = {
-    url: 'https://accounts.spotify.com/api/token',
-    headers: { 'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64')) },
-    form: {
-      grant_type: 'refresh_token',
-      refresh_token: refresh_token
-    },
-    json: true
-  };
-
-  request.post(authOptions, function(error, response, body) {
-    if (!error && response.statusCode === 200) {
-      var access_token = body.access_token;
-      res.send({
-        'access_token': access_token
-      });
-    }
   });
-});
 
-console.log('Listening on 8888');
-app.listen(8888);
+  return app;
+}
+
+async function main() {
+  const pgClient = new PostgresClient({
+    user: 'foreign_music',
+    host: 'foreign-music.c0prpxq16lno.us-east-2.redshift.amazonaws.com',
+    database: 'prod',
+    password: secrets.pgPassword,
+    port: 5439,
+  });
+  await pgClient.connect();
+
+  const spotifyApi = new SpotifyWebApi({
+    clientId: '33698d56449e4a8c9226f27573756d16',
+    clientSecret: secrets.spotifyClientSecret,
+  });
+
+  // Retrieve an access token.
+  // TODO: This will probably be switched to Authorization
+  // Code Flow from Client Credential Flow once user authentication is needed
+  // (for playing music, and saving music to their library).
+  await spotifyApi.clientCredentialsGrant().then(
+    (data) => {
+      // Save the access token so that it's used in future calls
+      spotifyApi.setAccessToken(data.body['access_token']);
+    },
+    (err) => {
+      console.log('Something went wrong when retrieving an access token', err);
+    });
+
+  const app = newApp(pgClient, spotifyApi);
+  console.log('Listening on 8888');
+  app.listen(8888);
+}
+
+main();

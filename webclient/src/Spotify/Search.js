@@ -28,6 +28,7 @@ export default class Search extends Component {
     this.setState({searchResults: searchResults.tracks.items});
   }
 
+  // TODO: Picking first item in list doesn't work.
   handleSelection(e) {
     this.setState({selected: e.target.value});
     this.props.onSelectedCallback(e.target.value);

@@ -344,6 +344,7 @@ async function recommendTracks(pgClient, spotifyApi, userSeedTrack) {
       ...recommendationsWithCountry
       .filter(track => track.country));
   }));
+  // TODO: filter duplicate reuslts.
   return allRecommendations;
 }
 
@@ -462,4 +463,7 @@ async function printTrack(track) {
   console.log(`${track.artists[0].name} - ${track.name} (${track.country}) (${track.preview_url})`);
 }
 
-main();
+if (require.main === module) {
+  main();
+}
+module.exports = {recommendTracks};
