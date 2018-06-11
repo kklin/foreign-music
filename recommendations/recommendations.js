@@ -153,7 +153,7 @@ async function main() {
 }
 
 function usage() {
-  console.error(`${process.argv[0]} ${process.argv[1]} seed | recommend <search> | list-genres | analyze-db | analyze-artist <artist>`);
+  console.error(`${process.argv[0]} ${process.argv[1]} seed | recommend <seed track ID> | list-genres | analyze-db | analyze-artist <artist>`);
   process.exit(1);
 }
 
@@ -261,21 +261,24 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
   }));
 }
 
-async function recommendTracks(pgClient, spotifyApi, userTrackName) {
-  let searchResult;
+async function recommendTracks(pgClient, spotifyApi, userSeedTrack) {
+  let userTrackInfo;
   try {
-    searchResult = await spotifyApi.searchTracks(userTrackName);
+    const trackResp = await spotifyApi.getTrack(userSeedTrack);
+    userTrackInfo = trackResp.body;
   } catch (err) {
-    throw new Error(`Failed to search for user track`);
+    throw new Error(`Failed to lookup track: ${err}`);
   }
 
-  if (searchResult.body.tracks.items === 0) {
+  if (!userTrackInfo) {
     throw new Error('No results for track');
   }
-  const userTrackInfo = searchResult.body.tracks.items[0];
 
   const seedTrackArtistInfo = await spotifyApi.getArtist(userTrackInfo.artists[0].id);
   const seedTrackGenres = seedTrackArtistInfo.body.genres;
+  if (seedTrackGenres.length === 0) {
+    throw new Error('No genre information for track');
+  }
 
   let foreignSeedTypes;
   try {
