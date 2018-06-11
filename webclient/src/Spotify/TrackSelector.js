@@ -6,9 +6,8 @@ export default class TrackSelector extends Component {
     return (
       <div>
         {this.props.tracks.map(track => (
-          <PlayButton userAccessToken={this.props.userAccessToken}
-            userDeviceId={this.props.userDeviceId}
-            track={track} />
+          <PlayButton key={track.id} userAccessToken={this.props.userAccessToken}
+            userDeviceId={this.props.userDeviceId} track={track} />
         ))}
       </div>
     );
