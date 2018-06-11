@@ -16,9 +16,9 @@ const PostgresClient = require('pg').Client;
 
 function newApp(pgClient, spotifyApi) {
   var app = express();
-
   app.use(cors());
 
+  // TODO: Only allow authenticated users to hit this API.
   app.get('/api/recommendation/:seed', async function(req, res) {
     const userTrackId = req.params.seed;
     const recommendations = await recommendTracks(pgClient, spotifyApi, req.params.seed);
