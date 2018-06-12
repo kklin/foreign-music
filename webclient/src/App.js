@@ -1,8 +1,4 @@
 import React, { Component } from 'react';
-import WebPlaybackReact from './Spotify/WebPlaybackReact.js';
-import TrackSelector from './Spotify/TrackSelector.js';
-import Search from './Spotify/Search.js';
-import axios from 'axios';
 
 import './App.css';
 import Header from './layout/Header.js';
@@ -10,23 +6,14 @@ import Header from './layout/Header.js';
 import LoginCallback from './Spotify/LoginCallback.js';
 
 import IntroScreen from './screens/Intro.js';
-import NowPlayingScreen from './screens/NowPlaying.js';
+import RecommendationScreen from './screens/Recommendation.js';
 
 window.onSpotifyWebPlaybackSDKReady = () => {};
 
 export default class App extends Component {
   state = {
     // User's session credentials
-    userDeviceId: null,
     userAccessToken: null,
-
-    // Player state
-    playerState: null
-  }
-
-  constructor() {
-    super();
-    this.getRecommendations = this.getRecommendations.bind(this);
   }
 
   componentWillMount() {
@@ -52,32 +39,8 @@ export default class App extends Component {
     console.error("The user access token has expired.");
   }
 
-  async getRecommendations() {
-    // TODO: Set a loading state in UI while request is in flight.
-    const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${this.state.userSeedTrack}`);
-    this.setState({
-      recommendations: recommendations.data.tracks,
-    });
-  }
-
   render() {
-    let {
-      userDeviceId,
-      userAccessToken,
-      userSeedTrack,
-      playerState
-    } = this.state;
-
-    let webPlaybackSdkProps = {
-      playerName: "Spotify React Player",
-      playerInitialVolume: 1.0,
-      playerRefreshRateMs: 100,
-      playerAutoConnect: true,
-      onPlayerRequestAccessToken: (() => userAccessToken),
-      onDeviceReady: (data) => this.setState({ userDeviceId: data.device_id }),
-      onPlayerStateChange: (playerState => this.setState({ playerState })),
-      onPlayerError: (playerError => console.error(playerError))
-    };
+    const { userAccessToken } = this.state;
 
     return (
       <div className="App">
@@ -85,22 +48,7 @@ export default class App extends Component {
 
         <main>
           {!userAccessToken && <IntroScreen />}
-          {userAccessToken &&
-            <Search userAccessToken={userAccessToken} onSelectedCallback={val => this.setState({userSeedTrack: val})}/>
-          }
-          {userAccessToken && userDeviceId && userSeedTrack &&
-            <button onClick={this.getRecommendations}>Get Recommendations</button>
-          }
-          {userAccessToken && userDeviceId && this.state.recommendations &&
-            <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={this.state.recommendations}/>
-          }
-          {userAccessToken &&
-            <WebPlaybackReact {...webPlaybackSdkProps}>
-              {playerState &&
-                <NowPlayingScreen playerState={playerState} />
-              }
-            </WebPlaybackReact>
-          }
+          {userAccessToken && <RecommendationScreen userAccessToken={userAccessToken} />}
         </main>
       </div>
     );
