@@ -4,7 +4,7 @@ import SpotifyWebApi from 'spotify-web-api-js';
 export default class Search extends Component {
   state = {
     searchResults: null,
-    selected: null,
+    selectedTrack: null,
   };
   constructor() {
     super();
@@ -18,10 +18,13 @@ export default class Search extends Component {
   }
 
   async maybeSearch(query) {
+    this.setState({selectedTrack: null});
     if (this.searchDebouncer) {
       clearTimeout(this.searchDebouncer);
     }
-    this.searchDebouncer = setTimeout(() => this.search(query), this.props.searchDelay);
+    if (query) {
+      this.searchDebouncer = setTimeout(() => this.search(query), this.props.searchDelay);
+    }
   }
 
   async search(query) {
@@ -31,20 +34,34 @@ export default class Search extends Component {
 
   // TODO: Picking first item in list doesn't work.
   handleSelection(e) {
-    this.setState({selected: e.target.value});
-    this.props.onSelectedCallback(e.target.value);
+    const selectedId = e.target.value;
+    const selectedTrackList = this.state.searchResults.filter((track) => track.id === selectedId);
+    if (selectedTrackList.length !== 1) {
+      throw new Error(`Unable to find selected track: ${selectedId}`);
+    }
+    const selectedTrack = selectedTrackList[0];
+
+    this.setState({
+      selectedTrack,
+      searchResults: null,
+    });
+    this.props.onSelectedCallback(selectedTrack.id);
   }
 
   render() {
+    const selectedTrackString = this.state.selectedTrack ? trackString(this.state.selectedTrack) : null;
     return (
       <div>
-        <input type="text" onChange={(e) => e.target.value && this.maybeSearch(e.target.value)} />
+        <input type="text"
+          value={selectedTrackString}
+          style={{width: "100%"}}
+          onChange={(e) => this.maybeSearch(e.target.value)} />
         {this.state.searchResults &&
-          <select size="10" onChange={this.handleSelection}>
+          <select size="10" onChange={this.handleSelection} style={{width: "100%"}}>
             {this.state.searchResults.map(result =>
               (<option key={result.id} value={result.id}>
-                {result.artists[0].name} - {result.name}
-                </option>)
+                {trackString(result)}
+              </option>)
             )}
           </select>
         }
@@ -52,3 +69,7 @@ export default class Search extends Component {
     );
   }
 };
+
+function trackString(track) {
+  return `${track.artists[0].name} - ${track.name}`;
+}

@@ -18,10 +18,10 @@ export default class IntroScreen extends Component {
     this.getRecommendations = this.getRecommendations.bind(this);
   }
 
-  async getRecommendations() {
+  async getRecommendations(userSeedTrack) {
     this.setState({fetchingRecommendations: true});
     try {
-      const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${this.state.userSeedTrack}`);
+      const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${userSeedTrack}`);
       this.setState({
         fetchingRecommendations: false,
         recommendations: recommendations.data.tracks,
@@ -35,7 +35,6 @@ export default class IntroScreen extends Component {
   render() {
     const {
       userDeviceId,
-      userSeedTrack,
       playerState
     } = this.state;
     const {userAccessToken} = this.props;
@@ -55,10 +54,7 @@ export default class IntroScreen extends Component {
         <Search
           userAccessToken={userAccessToken}
           searchDelay={500}
-          onSelectedCallback={val => this.setState({userSeedTrack: val})}/>
-        {userSeedTrack &&
-          <button onClick={this.getRecommendations}>Get Recommendations</button>
-        }
+          onSelectedCallback={track => this.getRecommendations(track)}/>
         {this.state.fetchingRecommendations &&
           <Loader/>
         }
