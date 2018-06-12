@@ -22,7 +22,7 @@ export default class PlayButton extends Component {
   render() {
     return (
       <div>
-        <button onClick={this.startPlayback}>Play</button> ({this.props.track.country}) {this.props.track.artists[0].name} - {this.props.track.name}
+        <button onClick={this.startPlayback} disabled={!this.props.userDeviceId}>Play</button> ({this.props.track.country}) {this.props.track.artists[0].name} - {this.props.track.name}
       </div>
     );
   }

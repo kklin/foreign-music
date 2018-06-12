@@ -53,13 +53,13 @@ export default class IntroScreen extends Component {
     return (
       <div>
         <Search userAccessToken={userAccessToken} onSelectedCallback={val => this.setState({userSeedTrack: val})}/>
-        {userDeviceId && userSeedTrack &&
+        {userSeedTrack &&
           <button onClick={this.getRecommendations}>Get Recommendations</button>
         }
-        {userDeviceId && this.state.fetchingRecommendations &&
+        {this.state.fetchingRecommendations &&
           <Loader/>
         }
-        {userDeviceId && !this.state.fetchingRecommendations && this.state.recommendations &&
+        {!this.state.fetchingRecommendations && this.state.recommendations &&
           <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={this.state.recommendations}/>
         }
         <WebPlaybackReact {...webPlaybackSdkProps}>
