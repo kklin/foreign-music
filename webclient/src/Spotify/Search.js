@@ -4,7 +4,6 @@ import SpotifyWebApi from 'spotify-web-api-js';
 export default class Search extends Component {
   state = {
     searchResults: null,
-    query: null,
     selected: null,
   };
   constructor() {
@@ -18,13 +17,15 @@ export default class Search extends Component {
     this.webApiInstance.setAccessToken(this.props.userAccessToken);
   }
 
-  async search() {
-    this.props.onSelectedCallback(null);
-    if (!this.state.query) {
-      return
+  async maybeSearch(query) {
+    if (this.searchDebouncer) {
+      clearTimeout(this.searchDebouncer);
     }
+    this.searchDebouncer = setTimeout(() => this.search(query), this.props.searchDelay);
+  }
 
-    const searchResults = await this.webApiInstance.searchTracks(this.state.query, {});
+  async search(query) {
+    const searchResults = await this.webApiInstance.searchTracks(query, {});
     this.setState({searchResults: searchResults.tracks.items});
   }
 
@@ -37,6 +38,7 @@ export default class Search extends Component {
   render() {
     return (
       <div>
+        <input type="text" onChange={(e) => e.target.value && this.maybeSearch(e.target.value)} />
         {this.state.searchResults &&
           <select size="10" onChange={this.handleSelection}>
             {this.state.searchResults.map(result =>
@@ -46,8 +48,6 @@ export default class Search extends Component {
             )}
           </select>
         }
-        <input type="text" onChange={e => this.setState({query: e.target.value})} />
-        <button onClick={this.search}>Search</button>
       </div>
     );
   }

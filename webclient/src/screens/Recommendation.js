@@ -52,7 +52,10 @@ export default class IntroScreen extends Component {
     };
     return (
       <div>
-        <Search userAccessToken={userAccessToken} onSelectedCallback={val => this.setState({userSeedTrack: val})}/>
+        <Search
+          userAccessToken={userAccessToken}
+          searchDelay={500}
+          onSelectedCallback={val => this.setState({userSeedTrack: val})}/>
         {userSeedTrack &&
           <button onClick={this.getRecommendations}>Get Recommendations</button>
         }
