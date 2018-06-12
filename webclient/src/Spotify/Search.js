@@ -32,7 +32,6 @@ export default class Search extends Component {
     this.setState({searchResults: searchResults.tracks.items});
   }
 
-  // TODO: Picking first item in list doesn't work.
   handleSelection(e) {
     const selectedId = e.target.value;
     const selectedTrackList = this.state.searchResults.filter((track) => track.id === selectedId);
@@ -58,6 +57,7 @@ export default class Search extends Component {
           onChange={(e) => this.maybeSearch(e.target.value)} />
         {this.state.searchResults &&
           <select size="10" onChange={this.handleSelection} style={{width: "100%"}}>
+            <option style={{display:'none'}} />
             {this.state.searchResults.map(result =>
               (<option key={result.id} value={result.id}>
                 {trackString(result)}
