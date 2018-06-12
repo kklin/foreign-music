@@ -1,6 +1,7 @@
 const SpotifyWebApi = require('spotify-web-api-node');
 const PostgresClient = require('pg').Client;
 const secrets = require('./secrets');
+const util = require('./util');
 
 const GenreEnum = Object.freeze({
   ACOUSTIC: 'acoustic',
@@ -115,7 +116,7 @@ async function main() {
       }
       const recommendations = (await recommendTracks(pgClient, spotifyApi, process.argv[3]))
         .filter(track => track.preview_url);
-      getRandomItems(recommendations, 15).forEach(printTrack);
+      util.getRandomItems(recommendations, 15).forEach(printTrack);
       break;
     case 'list-genres':
       await listAllGenres(pgClient, spotifyApi);
@@ -203,7 +204,7 @@ async function seedPlaylists(pgClient, spotifyApi, genre, country) {
     return;
   }
 
-  const playlistSample = getRandomItems(playlists, 5);
+  const playlistSample = util.getRandomItems(playlists, 5);
   return Promise.all(playlistSample.map((playlist) => {
     return pgClient.query('INSERT INTO playlists(id, owner_id, name, genre, country) VALUES ($1, $2, $3, $4, $5)',
       [playlist.id, playlist.owner.id, playlist.name.slice(0,128), genre, country]);
@@ -231,7 +232,7 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
     return;
   }
 
-  const playlistSample = getRandomItems(playlists, targetNumPlaylists);
+  const playlistSample = util.getRandomItems(playlists, targetNumPlaylists);
   const numTracksPerPlaylist = Math.ceil(targetNumTracks / playlistSample.length);
   return Promise.all(playlistSample.map(async (playlist) => {
     let tracks;
@@ -247,7 +248,7 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
       return track.track && track.track.id && track.track.name &&
         track.track.artists.length != 0 && track.track.artists[0].id;
     });
-    const trackSample = getRandomItems(usableTracks, 10);
+    const trackSample = util.getRandomItems(usableTracks, 10);
 
     return Promise.all(trackSample.map((track) => {
       return pgClient.query({
@@ -437,23 +438,6 @@ function getCountryForArtist(artist) {
     }
   }
   return null;
-}
-
-function getRandomItems(arr, n) {
-  if (arr.length < n) {
-    return arr;
-  }
-
-  const randomIndices = new Set();
-  while (randomIndices.size != n) {
-    randomIndices.add(getRandomNumber(arr.length));
-  }
-
-  return Array.from(randomIndices).map((idx) => arr[idx]);
-}
-
-function getRandomNumber(n) {
-  return Math.floor(Math.random() * n);
 }
 
 async function printTrack(track) {

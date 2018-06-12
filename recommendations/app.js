@@ -13,6 +13,7 @@ const secrets = require('./secrets');
 const {recommendTracks} = require('./recommendations');
 const SpotifyWebApi = require('spotify-web-api-node');
 const PostgresClient = require('pg').Client;
+const util = require('./util');
 
 function newApp(pgClient, spotifyApi) {
   var app = express();
@@ -23,7 +24,7 @@ function newApp(pgClient, spotifyApi) {
     const userTrackId = req.params.seed;
     const recommendations = await recommendTracks(pgClient, spotifyApi, req.params.seed);
     res.json({
-      tracks: recommendations,
+      tracks: util.getRandomItems(recommendations, 10),
     });
   });
 
