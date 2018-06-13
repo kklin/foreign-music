@@ -62,8 +62,8 @@ export default class IntroScreen extends Component {
           <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={this.state.recommendations}/>
         }
         <WebPlaybackReact {...webPlaybackSdkProps}>
-          {playerState &&
-            <NowPlayingScreen playerState={playerState} />
+          {userDeviceId &&
+            <NowPlayingScreen playerState={playerState} userAccessToken={userAccessToken} userDeviceId={userDeviceId} />
           }
         </WebPlaybackReact>
       </div>
