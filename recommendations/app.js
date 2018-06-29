@@ -31,6 +31,22 @@ function newApp(pgClient, spotifyApi) {
   return app;
 }
 
+async function setAccessToken(spotifyApi) {
+  await spotifyApi.clientCredentialsGrant().then(
+    (data) => {
+      // Save the access token so that it's used in future calls
+      spotifyApi.setAccessToken(data.body['access_token']);
+
+      // Refresh the access token in half of the expiration time (i.e. 30
+      // minutes, usually).
+      setTimeout(setAccessToken, data.body['expires_in'] * 1000 / 2, spotifyApi);
+    },
+    (err) => {
+      console.error('Something went wrong when retrieving an access token (trying again).', err);
+      setAccessToken(spotifyApi);
+    });
+}
+
 async function main() {
   const pgClient = new PostgresClient({
     user: 'foreign_music',
@@ -46,16 +62,7 @@ async function main() {
     clientSecret: secrets.spotifyClientSecret,
   });
 
-  // Retrieve an access token.
-  await spotifyApi.clientCredentialsGrant().then(
-    (data) => {
-      // Save the access token so that it's used in future calls
-      // TODO: Refresh the access token when it expires.
-      spotifyApi.setAccessToken(data.body['access_token']);
-    },
-    (err) => {
-      console.error('Something went wrong when retrieving an access token', err);
-    });
+  await setAccessToken(spotifyApi);
 
   const app = newApp(pgClient, spotifyApi);
   console.log('Listening on 8888');
