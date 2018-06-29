@@ -293,7 +293,8 @@ async function recommendTracks(pgClient, spotifyApi, userSeedTrack) {
   }
 
   if (foreignSeedTypes.length === 0) {
-    throw new Error('No seed data');
+    throw new Error(`No seed data for any of the genres: ${seedTrackGenres}. ` +
+      'Contact the administrator to re-seed the music database.');
   }
 
   const allRecommendations = [];

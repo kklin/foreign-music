@@ -10,6 +10,7 @@ export default class IntroScreen extends Component {
   state = {
     userDeviceId: null,
     fetchingRecommendations: false,
+    getRecommendationsError: null,
     playerState: null,
   }
 
@@ -25,10 +26,15 @@ export default class IntroScreen extends Component {
       this.setState({
         fetchingRecommendations: false,
         recommendations: recommendations.data.tracks,
+        getRecommendationsError: null,
       });
     } catch (error) {
       this.setState({fetchingRecommendations: false});
-      // TODO: Update UI with error.
+      if (error.response && error.response.data && error.response.data.error) {
+        this.setState({getRecommendationsError: error.response.data.error});
+      } else {
+        this.setState({getRecommendationsError: error.toString()});
+      }
     }
   }
 
@@ -60,6 +66,9 @@ export default class IntroScreen extends Component {
         }
         {!this.state.fetchingRecommendations && this.state.recommendations &&
           <TrackSelector userDeviceId={userDeviceId} userAccessToken={userAccessToken} tracks={this.state.recommendations}/>
+        }
+        {!this.state.fetchingRecommendations && this.state.getRecommendationsError &&
+           <h2 className="action-red">{this.state.getRecommendationsError}</h2>
         }
         <WebPlaybackReact {...webPlaybackSdkProps}>
           {userDeviceId &&
