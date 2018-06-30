@@ -3,7 +3,7 @@
 The foreign music finder helps you find music from other countries that's
 similar to music you enjoy, but hard to stumble across normally.
 
-Try it at https://morning-forest-21141.herokuapp.com/! Because it's hosted on
+Try it at https://kklin.github.io/foreign-music! Because it's hosted on
 free Heroku dynos, it might feel sluggish, especially when first using it.
 
 _Note: Only tested on Google Chrome. I know for a fact that Safari does not work._
