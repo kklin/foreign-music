@@ -1,7 +1,7 @@
 # Foreign Music Discovery
 
-The foreign music finder helps you find music from other countries that is
-similar to music you enjoy, but you wouldn't stumble across normally.
+The foreign music finder helps you find music from other countries that's
+similar to music you enjoy, but hard to stumble across normally.
 
 Try it at https://morning-forest-21141.herokuapp.com/!
 
