@@ -259,7 +259,7 @@ async function seedTracks(pgClient, spotifyApi, genre, country) {
   }));
 }
 
-async function recommendTracks(pgClient, spotifyApi, userSeedTrack) {
+async function recommendTracks(pgClient, spotifyApi, userSeedTrack, market) {
   let userTrackInfo;
   try {
     const trackResp = await spotifyApi.getTrack(userSeedTrack);
@@ -324,6 +324,7 @@ async function recommendTracks(pgClient, spotifyApi, userSeedTrack) {
         seed_tracks: [userTrackInfo.id, foreignSeedTracks[0].id],
         // TODO: Are these sorted somehow? Would it benefit us to use a lower limit?
         limit: 50,
+        market,
       });
       recommendations = recommendationsResp.body.tracks;
     } catch (err) {

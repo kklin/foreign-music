@@ -22,8 +22,9 @@ function newApp(pgClient, spotifyApi) {
   // TODO: Only allow authenticated users to hit this API.
   app.get('/api/recommendation/:seed', async function(req, res) {
     const userTrackId = req.params.seed;
+    const market = req.query.market;
     try {
-      const recommendations = await recommendTracks(pgClient, spotifyApi, req.params.seed);
+      const recommendations = await recommendTracks(pgClient, spotifyApi, userTrackId, market);
       res.json({
         tracks: util.getRandomItems(recommendations, 10),
       });

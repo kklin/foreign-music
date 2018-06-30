@@ -5,10 +5,12 @@ import Search from '../Spotify/Search.js';
 import Loader from 'react-loader';
 import axios from 'axios';
 import NowPlayingScreen from './NowPlaying.js';
+import SpotifyWebApi from 'spotify-web-api-js';
 
 export default class IntroScreen extends Component {
   state = {
     userDeviceId: null,
+    userMarket: null,
     fetchingRecommendations: false,
     getRecommendationsError: null,
     playerState: null,
@@ -19,10 +21,26 @@ export default class IntroScreen extends Component {
     this.getRecommendations = this.getRecommendations.bind(this);
   }
 
-  async getRecommendations(userSeedTrack) {
+  componentDidMount() {
+    this.fetchUserMarket();
+  }
+
+  async fetchUserMarket() {
+    const webApiInstance = new SpotifyWebApi();
+    webApiInstance.setAccessToken(this.props.userAccessToken);
+    try {
+      const userInfo = await webApiInstance.getMe();
+      this.setState({userMarket: userInfo.country});
+    } catch (err) {
+      console.error(`Failed to get user market: ${err}`);
+      setTimeout(this.fetchUserMarket, 1000);
+    }
+  }
+
+  async getRecommendations(userSeedTrack, market) {
     this.setState({fetchingRecommendations: true});
     try {
-      const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${userSeedTrack}`);
+      const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${userSeedTrack}?market=${market}`);
       this.setState({
         fetchingRecommendations: false,
         recommendations: recommendations.data.tracks,
@@ -41,6 +59,7 @@ export default class IntroScreen extends Component {
   render() {
     const {
       userDeviceId,
+      userMarket,
       playerState
     } = this.state;
     const {userAccessToken} = this.props;
@@ -57,10 +76,12 @@ export default class IntroScreen extends Component {
     };
     return (
       <div>
-        <Search
-          userAccessToken={userAccessToken}
-          searchDelay={500}
-          onSelectedCallback={track => this.getRecommendations(track)}/>
+        {userMarket &&
+          <Search
+            userAccessToken={userAccessToken}
+            searchDelay={500}
+            onSelectedCallback={track => this.getRecommendations(track, userMarket)}/>
+        }
         {this.state.fetchingRecommendations &&
           <Loader/>
         }
