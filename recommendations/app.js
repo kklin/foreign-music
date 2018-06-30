@@ -61,6 +61,7 @@ async function main() {
     password: secrets.pgPassword,
     port: 5439,
   });
+  console.log('Connecting to Postgres...');
   await pgClient.connect();
 
   const spotifyApi = new SpotifyWebApi({
@@ -68,6 +69,7 @@ async function main() {
     clientSecret: secrets.spotifyClientSecret,
   });
 
+  console.log('Getting Spotify access token...');
   await setAccessToken(spotifyApi);
 
   const app = newApp(pgClient, spotifyApi);
