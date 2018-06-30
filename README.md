@@ -7,7 +7,7 @@ Try it at https://morning-forest-21141.herokuapp.com/!
 
 _Note: A Spotify premium account is required_
 
-<GIF>
+<img src="/demo.gif?raw=true" width="750px">
 
 ## How It Works
 The recommendations are generated in three parts.
