@@ -3,7 +3,7 @@
 The foreign music finder helps you find music from other countries that is
 similar to music you enjoy, but you wouldn't stumble across normally.
 
-Try it at <URL>!
+Try it at https://morning-forest-21141.herokuapp.com/!
 
 _Note: A Spotify premium account is required_
 
