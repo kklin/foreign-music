@@ -3,7 +3,8 @@
 The foreign music finder helps you find music from other countries that's
 similar to music you enjoy, but hard to stumble across normally.
 
-Try it at https://morning-forest-21141.herokuapp.com/!
+Try it at https://morning-forest-21141.herokuapp.com/! Because it's hosted on
+free Heroku dynos, it might feel sluggish, especially when first using it.
 
 _Note: A Spotify premium account is required_
 
