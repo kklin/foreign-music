@@ -40,7 +40,7 @@ export default class IntroScreen extends Component {
   async getRecommendations(userSeedTrack, market) {
     this.setState({fetchingRecommendations: true});
     try {
-      const recommendations = await axios.get(`http://localhost:8888/api/recommendation/${userSeedTrack}?market=${market}`);
+      const recommendations = await axios.get(`http://arcane-garden-26602.herokuapp.com/api/recommendation/${userSeedTrack}?market=${market}`);
       this.setState({
         fetchingRecommendations: false,
         recommendations: recommendations.data.tracks,
