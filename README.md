@@ -6,6 +6,8 @@ similar to music you enjoy, but hard to stumble across normally.
 Try it at https://morning-forest-21141.herokuapp.com/! Because it's hosted on
 free Heroku dynos, it might feel sluggish, especially when first using it.
 
+_Note: Only tested on Google Chrome. I know for a fact that Safari does not work._
+
 _Note: A Spotify premium account is required_
 
 <img src="/demo.gif?raw=true" width="750px">
