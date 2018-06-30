@@ -1,7 +1,7 @@
 export default {
   logInWithSpotify: (() => {
     let client_id      = "33698d56449e4a8c9226f27573756d16";
-    let redirect_uri   = "http://localhost:3000";
+    let redirect_uri   = "http://morning-forest-21141.herokuapp.com";
     let scopes         = "streaming user-read-birthdate user-read-email user-read-private user-modify-playback-state";
     let scopes_encoded = scopes.replace(" ", "%20");
 
