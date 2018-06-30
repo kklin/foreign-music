@@ -8,5 +8,9 @@
     "express": "~4.16.0",
     "pg": "^7.4.3",
     "spotify-web-api-node": "^3.1.1"
+  },
+  "scripts": {
+    "start": "node ./app.js",
+    "publishheroku": "cd .. && git subtree push --prefix recommendations foreign-music-recommendations master || true"
   }
 }

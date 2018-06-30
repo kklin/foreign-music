@@ -18,7 +18,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --env=jsdom",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "publishheroku": "cd .. && git subtree push --prefix webclient foreign-music-webclient master || true"
   },
   "license": "MIT"
 }

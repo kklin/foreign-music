@@ -70,7 +70,7 @@ See the [example](./recommendations/secrets.json.example) for reference.
 This will take tens of minutes to complete, but logs should be printed as it
 goes through the different country and genre pairs.
 
-6. Start the recommendations server with `node ./recommendations/app.js`
+6. Start the recommendations server with `cd ./recommendations && npm start`
 
 7. Start the client-facing web server with `cd ./webclient && npm start`.
 
