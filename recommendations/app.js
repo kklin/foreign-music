@@ -75,7 +75,7 @@ async function main() {
   const app = newApp(pgClient, spotifyApi);
 
   const port = process.env.PORT || 8888;
-  console.log('Listening on ${port}');
+  console.log(`Listening on ${port}`);
   app.listen(port);
 }
 
